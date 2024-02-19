@@ -45,7 +45,7 @@ class ArticleRepositoryTest {
         assertThat(articles.get(0).getContent()).isEqualTo(article.getContent());
         assertThat(articles.get(0).isActive()).isTrue();
     }
-z
+
     @DisplayName("findAll()이 isActive가 false인 Article 객체를 반환하지 않는지 확인")
     @Test
     void givenDeletedArticle_whenSelecting_thenWorksFine() {

@@ -29,7 +29,6 @@ class ArticleRepositoryTest {
         article = Article.builder().content("test").title("test").build();
     }
 
-
     @DisplayName("findAll()이 isActive가 true인 Article 객체를 반환하는지 확인")
     @Test
     void givenArticle_whenSelecting_thenWorksFine() {
@@ -46,7 +45,7 @@ class ArticleRepositoryTest {
         assertThat(articles.get(0).getContent()).isEqualTo(article.getContent());
         assertThat(articles.get(0).isActive()).isTrue();
     }
-
+z
     @DisplayName("findAll()이 isActive가 false인 Article 객체를 반환하지 않는지 확인")
     @Test
     void givenDeletedArticle_whenSelecting_thenWorksFine() {

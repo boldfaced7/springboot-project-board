@@ -1,6 +1,8 @@
 package com.boldfaced7.board.Controller;
 
-import com.boldfaced7.board.Service.ArticleService;
+import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.response.ArticleListResponse;
+import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.request.ArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,31 +12,34 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-@RequestMapping("/api/v1/articles")
+@RequestMapping("/api/articles")
 @RestController
 @RequiredArgsConstructor
 public class ArticleController {
 
     private final ArticleService articleService;
-    private final String urlTemplate = "/api/v1/articles";
+    private final String urlTemplate = "/api/articles";
 
     @GetMapping
-    public ResponseEntity<List<ArticleResponse>> getArticles() {
+    public ResponseEntity<ArticleListResponse> getArticles() {
         List<ArticleResponse> articles = articleService.getArticles()
                 .stream()
                 .map(ArticleResponse::new)
                 .toList();
 
+        ArticleListResponse articleListResponse = new ArticleListResponse(articles);
+
         return ResponseEntity.ok()
-                .body(articles);
+                .body(articleListResponse);
     }
 
     @GetMapping("/{articleId}")
     public ResponseEntity<ArticleResponse> getArticle(@PathVariable Long articleId) {
-        ArticleResponse article = articleService.getArticle(articleId).toResponse();
+        ArticleDto dto = articleService.getArticle(articleId);
+        ArticleResponse response = new ArticleResponse(dto);
 
         return ResponseEntity.ok()
-                .body(article);
+                .body(response);
     }
 
     @PostMapping

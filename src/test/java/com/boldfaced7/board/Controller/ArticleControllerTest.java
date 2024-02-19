@@ -1,6 +1,7 @@
 package com.boldfaced7.board.Controller;
 
-import com.boldfaced7.board.Service.ArticleService;
+import com.boldfaced7.board.dto.ArticleCommentDto;
+import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.request.ArticleRequest;
 import com.google.gson.Gson;
@@ -17,8 +18,7 @@ import java.util.List;
 
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("API 컨트롤러 - 게시글")
 @WebMvcTest(ArticleController.class)
@@ -27,19 +27,23 @@ class ArticleControllerTest {
     @Autowired MockMvc mvc;
     @Autowired Gson gson;
     @MockBean private ArticleService articleService;
-    final String urlTemplate = "/api/v1/articles";
+    final String urlTemplate = "/api/articles";
 
     @DisplayName("[API][GET] 게시글 리스트 조회 - 정상 호출")
     @Test
     void givenNothing_whenRequestingArticles_thenReturnsArticlesJsonResponse() throws Exception {
         // Given
-        ArticleDto articledto = createArticleDto();
-        given(articleService.getArticles()).willReturn(List.of(articledto));
+        ArticleDto articleDto = createArticleDto();
+        given(articleService.getArticles()).willReturn(List.of(articleDto));
 
         // When & Then
         mvc.perform(get(urlTemplate))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.articles[0].articleId").value(articleDto.getArticleId()))
+                .andExpect(jsonPath("$.articles[0].title").value(articleDto.getTitle()))
+                .andExpect(jsonPath("$.articles[0].content").value(articleDto.getContent()))
+                .andExpect(jsonPath("$.articles[0].author").value(articleDto.getAuthor()));
 
         then(articleService).should().getArticles();
     }
@@ -55,7 +59,12 @@ class ArticleControllerTest {
         // When & Then
         mvc.perform(get(urlTemplate + "/" + articleId))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.articleId").value(articleDto.getArticleId()))
+                .andExpect(jsonPath("$.title").value(articleDto.getTitle()))
+                .andExpect(jsonPath("$.content").value(articleDto.getContent()))
+                .andExpect(jsonPath("$.author").value(articleDto.getAuthor()));
+
         then(articleService).should().getArticle(articleId);
     }
 
@@ -121,7 +130,20 @@ class ArticleControllerTest {
 
     private ArticleDto createArticleDto() {
         return ArticleDto.builder()
+                .articleId(1L)
                 .title("title")
+                .content("content")
+                .author("boldfaced7")
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
+                .articleComments(List.of(createArticleCommentDto()))
+                .build();
+    }
+
+    private ArticleCommentDto createArticleCommentDto() {
+        return ArticleCommentDto.builder()
+                .articleCommentId(1L)
+                .articleId(1L)
                 .content("content")
                 .author("boldfaced7")
                 .createdAt(LocalDateTime.now())

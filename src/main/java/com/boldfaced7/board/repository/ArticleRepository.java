@@ -14,7 +14,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     @Query("select a from Article a where a.id = :id and a.isActive = true")
     public Optional<Article> findById(@Param("id") Long id);
 
-    public Optional<Article> findByIdAndIsActiveIsTrue();
+    public Optional<Article> findByIdAndIsActiveIsTrue(Long id);
 
     @Query("select a from Article a where a.isActive = true")
     public List<Article> findAll();

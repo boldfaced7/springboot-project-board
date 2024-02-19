@@ -1,7 +1,10 @@
-package com.boldfaced7.board.Service;
+package com.boldfaced7.board.service;
 
 import com.boldfaced7.board.domain.Article;
+import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +29,7 @@ class ArticleServiceTest {
 
     @InjectMocks private ArticleService articleService;
     @Mock private ArticleRepository articleRepository;
+    @Mock private ArticleCommentRepository articleCommentRepository;
 
     @DisplayName("[조회] 게시글 목록을 반환")
     @Test
@@ -40,25 +45,38 @@ class ArticleServiceTest {
         // Then
         assertThat(articles).isNotEmpty();
         then(articleRepository).should().findAll();
-
     }
 
-    @DisplayName("[조회] id를 입력하면, 게시글을 반환")
+    @DisplayName("[조회] id를 입력하면, 게시글과 관련 댓글 리스트를 반환")
     @Test
     void givenArticleId_whenSearchingArticle_thenReturnsArticle() {
         //Given
         Long articleId = 1L;
         Article article = createArticle(articleId);
+
+        Long articleCommentId = 1L;
+        ArticleComment articleComment = createArticleComment(articleCommentId, article);
+        List<ArticleComment> articleComments = List.of(articleComment);
+
         given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+        given(articleCommentRepository.findAllByArticle(article)).willReturn(articleComments);
 
         // When
         ArticleDto dto = articleService.getArticle(articleId);
 
         // Then
         assertThat(dto)
+                .hasFieldOrPropertyWithValue("articleId", article.getId())
                 .hasFieldOrPropertyWithValue("title", article.getTitle())
                 .hasFieldOrPropertyWithValue("content", article.getContent());
+
+        assertThat(dto.getArticleComments().get(0))
+                .hasFieldOrPropertyWithValue("articleCommentId", articleComment.getId())
+                .hasFieldOrPropertyWithValue("articleId", article.getId())
+                .hasFieldOrPropertyWithValue("content", articleComment.getContent());
+
         then(articleRepository).should().findById(articleId);
+        then(articleCommentRepository).should().findAllByArticle(article);
     }
 
     @DisplayName("[조회] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
@@ -226,18 +244,48 @@ class ArticleServiceTest {
         return article;
     }
 
+    private ArticleComment createArticleComment(Long id, Article article) {
+        ArticleComment articleComment = ArticleComment.builder()
+                .article(article)
+                .content("content")
+                .build();
+
+        ReflectionTestUtils.setField(articleComment, "id", id);
+
+        return articleComment;
+    }
+
     private ArticleDto createArticleDto() {
         return ArticleDto.builder()
+                .articleId(1L)
                 .title("title")
                 .content("content")
                 .author("boldfaced7")
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
+                .articleComments(List.of(createArticleCommentDto()))
                 .build();
     }
     private ArticleDto createArticleDto(String title, String content, String author) {
         return ArticleDto.builder()
+                .articleId(1L)
                 .title(title)
                 .content(content)
                 .author(author)
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
+                .articleComments(List.of(createArticleCommentDto()))
+                .build();
+    }
+
+    private ArticleCommentDto createArticleCommentDto() {
+        return ArticleCommentDto.builder()
+                .articleCommentId(1L)
+                .content("content")
+                .author("boldfaced7")
+                .articleId(1L)
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
                 .build();
     }
 }

@@ -1,32 +1,29 @@
 package com.boldfaced7.board.dto;
 
 import com.boldfaced7.board.domain.Article;
-import com.boldfaced7.board.dto.response.ArticleResponse;
+import com.boldfaced7.board.domain.ArticleComment;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
 public class ArticleDto {
 
+    private Long articleId;
     private String title;
     private String content;
     private String author;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
-
-    @Builder
-    public ArticleDto(String title, String content, String author,
-                      LocalDateTime createdAt, LocalDateTime modifiedAt) {
-        this.title = title;
-        this.content = content;
-        this.author = author;
-        this.createdAt = createdAt;
-        this.modifiedAt = modifiedAt;
-    }
+    private List<ArticleCommentDto> articleComments;
 
     public ArticleDto(Article article) {
+        articleId = article.getId();
         title = article.getTitle();
         content = article.getContent();
         author = article.getCreatedBy();
@@ -34,20 +31,20 @@ public class ArticleDto {
         modifiedAt = article.getModifiedAt();
     }
 
+    public ArticleDto(Article article, List<ArticleComment> articleComments) {
+        articleId = article.getId();
+        title = article.getTitle();
+        content = article.getContent();
+        author = article.getCreatedBy();
+        createdAt = article.getCreatedAt();
+        modifiedAt = article.getModifiedAt();
+        this.articleComments = articleComments.stream().map(ArticleCommentDto::new).toList();
+    }
+
     public Article toEntity() {
         return Article.builder()
                 .title(title)
                 .content(content)
-                .build();
-    }
-
-    public ArticleResponse toResponse() {
-        return ArticleResponse.builder()
-                .title(title)
-                .content(content)
-                .author(author)
-                .createdAt(createdAt)
-                .modifiedAt(modifiedAt)
                 .build();
     }
 }

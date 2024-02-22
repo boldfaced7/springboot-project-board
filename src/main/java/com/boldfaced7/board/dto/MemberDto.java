@@ -1,6 +1,7 @@
 package com.boldfaced7.board.dto;
 
 import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.dto.response.AuthResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,9 @@ public class MemberDto {
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
+    public MemberDto(Long memberId) {
+        this.memberId = memberId;
+    }
 
     public MemberDto(Member member) {
         memberId = member.getId();

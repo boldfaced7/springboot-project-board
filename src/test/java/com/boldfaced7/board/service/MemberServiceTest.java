@@ -1,23 +1,27 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
 
+import static com.boldfaced7.board.TestUtil.*;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.*;
 
 @DisplayName("MemberService 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -25,28 +29,35 @@ class MemberServiceTest {
 
     @InjectMocks private MemberService memberService;
     @Mock private MemberRepository memberRepository;
+    @Mock private BCryptPasswordEncoder encoder;
 
-    private static final String NO_MEMBER = "탈퇴했거나 존재하지 않는 회원입니다 - memberId: ";
+    @BeforeEach
+    void setUp() {
+        AuthInfoHolder.setAuthInfo(createAuthResponse());
+    }
+
+    @AfterEach
+    void clear() {
+        AuthInfoHolder.releaseAuthInfo();
+    }
 
     @DisplayName("[조회] email 존재 여부를 확인")
     @Test
     void givenEmail_whenSearching_thenReturnsTrueOrFalse() {
         //Given
-        Member member = createMember(1L);
-        String email = member.getEmail();
-        String wrongEmail = "wrong" + email;
-        given(memberRepository.existsByEmail(email)).willReturn(true);
+        String wrongEmail = "wrong" + EMAIL;
+        given(memberRepository.existsByEmail(EMAIL)).willReturn(true);
         given(memberRepository.existsByEmail(wrongEmail)).willReturn(false);
 
         // When
-        boolean isOccupied1 = memberService.isOccupiedEmail(email);
+        boolean isOccupied1 = memberService.isOccupiedEmail(EMAIL);
         boolean isOccupied2 = memberService.isOccupiedEmail(wrongEmail);
 
         // Then
         assertThat(isOccupied1).isTrue();
         assertThat(isOccupied2).isFalse();
 
-        then(memberRepository).should().existsByEmail(email);
+        then(memberRepository).should().existsByEmail(EMAIL);
         then(memberRepository).should().existsByEmail(wrongEmail);
     }
 
@@ -54,22 +65,20 @@ class MemberServiceTest {
     @Test
     void givenNickname_whenSearching_thenReturnsTrueOrFalse() {
         //Given
-        Member member = createMember(1L);
-        String nickname = member.getNickname();
-        String wrongNickanem = "wrong" + nickname;
-        given(memberRepository.existsByNickname(nickname)).willReturn(true);
-        given(memberRepository.existsByNickname(wrongNickanem)).willReturn(false);
+        String wrongNickname = "wrong" + NICKNAME;
+        given(memberRepository.existsByNickname(NICKNAME)).willReturn(true);
+        given(memberRepository.existsByNickname(wrongNickname)).willReturn(false);
 
         // When
-        boolean isOccupied1 = memberService.isOccupiedNickname(nickname);
-        boolean isOccupied2 = memberService.isOccupiedNickname(wrongNickanem);
+        boolean isOccupied1 = memberService.isOccupiedNickname(NICKNAME);
+        boolean isOccupied2 = memberService.isOccupiedNickname(wrongNickname);
 
         // Then
         assertThat(isOccupied1).isTrue();
         assertThat(isOccupied2).isFalse();
 
-        then(memberRepository).should().existsByNickname(nickname);
-        then(memberRepository).should().existsByNickname(wrongNickanem);
+        then(memberRepository).should().existsByNickname(NICKNAME);
+        then(memberRepository).should().existsByNickname(wrongNickname);
 
     }
 
@@ -77,9 +86,7 @@ class MemberServiceTest {
     @Test
     void givenNothing_whenSearching_thenReturnsMembers() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        given(memberRepository.findAll()).willReturn(List.of(member));
+        given(memberRepository.findAll()).willReturn(List.of(createMember()));
 
         // When
         List<MemberDto> memberDtos = memberService.getMembers();
@@ -93,12 +100,11 @@ class MemberServiceTest {
     @Test
     void givenTrueOrFalse_whenSearching_thenReturnsActiveOrInactiveMembers() {
         //Given
-        Long activeMemberId = 1L;
-        Member activeMember = createMember(activeMemberId);
+        Member activeMember = createMember();
         given(memberRepository.findAll(true)).willReturn(List.of(activeMember));
 
-        Long inactiveMemberId = 2L;
-        Member inactiveMember = createMember(inactiveMemberId);
+        Member inactiveMember = createMember();
+        ReflectionTestUtils.setField(inactiveMember, "id", 2L);
         inactiveMember.deactivate();
         given(memberRepository.findAll(false)).willReturn(List.of(inactiveMember));
 
@@ -107,8 +113,8 @@ class MemberServiceTest {
         List<MemberDto> inactiveMemberDtos = memberService.getMembers(false);
 
         // Then
-        assertThat(activeMemberDtos.get(0).getMemberId()).isEqualTo(activeMemberId);
-        assertThat(inactiveMemberDtos.get(0).getMemberId()).isEqualTo(inactiveMemberId);
+        assertThat(activeMemberDtos.get(0).getMemberId()).isEqualTo(activeMember.getId());
+        assertThat(inactiveMemberDtos.get(0).getMemberId()).isEqualTo(inactiveMember.getId());
 
         then(memberRepository).should().findAll(true);
         then(memberRepository).should().findAll(false);
@@ -118,15 +124,14 @@ class MemberServiceTest {
     @Test
     void givenMemberId_whenSearching_thenReturnsMember() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+        Member member = createMember();
+        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
 
         // When
-        MemberDto memberDto = memberService.getMember(memberId);
+        MemberDto memberDto = memberService.getMember(MEMBER_ID);
 
         // Then
-        assertThat(memberDto.getMemberId()).isEqualTo(memberId);
+        assertThat(memberDto.getMemberId()).isEqualTo(MEMBER_ID);
     }
 
     @DisplayName("[조회] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
@@ -142,7 +147,7 @@ class MemberServiceTest {
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(NO_MEMBER + wrongMemberId);
+                .hasMessage(MemberService.NO_MEMBER + wrongMemberId);
         then(memberRepository).should().findById(wrongMemberId);
     }
 
@@ -150,123 +155,132 @@ class MemberServiceTest {
     @Test
     void givenMemberInfo_whenSaving_thenSavesMember() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        MemberDto memberDto = new MemberDto(member);
+        Member member = createMember();
+        MemberDto memberDto = createRequestMemberDto();
+
         given(memberRepository.save(memberDto.toEntity())).willReturn(member);
+        given(encoder.encode(memberDto.getPassword())).willReturn(PASSWORD);
 
         // When
         Long returnedMemberId = memberService.saveMember(memberDto);
 
         // Then
-        assertThat(returnedMemberId).isEqualTo(memberId);
+        assertThat(returnedMemberId).isEqualTo(MEMBER_ID);
         then(memberRepository).should().save(memberDto.toEntity());
+        then(encoder).should().encode(memberDto.getPassword());
     }
 
     @DisplayName("[수정] id와 회원 수정 정보를 입력하면, 회원 정보를 수정")
     @Test
     void givenMemberIdAndModifiedMemberInfo_whenUpdatingMember_thenUpdatesMember() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        MemberDto memberDto = createMemberDto("newNickname");
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+        Member member = createMember();
+        MemberDto memberDto = createRequestMemberDto(MEMBER_ID);
+        memberDto.setNickname("new nickname");
+
+        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
 
         // When
-        memberService.updateMember(memberId, memberDto);
+        memberService.updateMember(memberDto);
 
         // Then
         assertThat(member)
                 .hasFieldOrPropertyWithValue("nickname", memberDto.getNickname());
-        then(memberRepository).should().findById(memberId);
+
+        then(memberRepository).should().findById(MEMBER_ID);
 
     }
 
-    @DisplayName("[수정] 잘못된 id를 입력하면, 수정 없이 예외를 던짐")
+    @DisplayName("[수정] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
     @Test
-    void givenWrongMemberIdAndModifiedMemberInfo_whenUpdatingMember_thenThrowsException() {
+    void givenWrongMemberAndModifiedMemberInfo_whenUpdatingMember_thenThrowsException() {
         //Given
-        Long wrongMemberId = 1L;
-        MemberDto memberDto = createMemberDto(1L);
-        given(memberRepository.findById(wrongMemberId)).willReturn(Optional.empty());
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        MemberDto dto = createRequestMemberDto(MEMBER_ID);
+        dto.setNickname("new nickname");
 
         // When
-        Throwable t = catchThrowable(() -> memberService.updateMember(wrongMemberId, memberDto));
+        Throwable t = catchThrowable(() -> memberService.updateMember(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(NO_MEMBER + wrongMemberId);
-        then(memberRepository).should().findById(wrongMemberId);
+                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
     }
 
     @DisplayName("[삭제] id를 입력하면, 회원을 삭제(soft delete)")
     @Test
     void givenMemberId_whenDeleting_thenDeletesMemberSoftVer() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+        Member member = createMember();
+        MemberDto dto = createRequestMemberDto(MEMBER_ID);
+        given(memberRepository.findById(dto.getMemberId())).willReturn(Optional.of(member));
 
         // When
-        memberService.softDeleteMember(memberId);
+        memberService.softDeleteMember(dto);
 
         // Then
         assertThat(member)
                 .hasFieldOrPropertyWithValue("isActive", false);
-        then(memberRepository).should().findById(memberId);
+
+        then(memberRepository).should().findById(MEMBER_ID);
     }
 
-    @DisplayName("[삭제] 잘못된 id를 입력하면, 삭제(soft delete) 없이 예외를 던짐")
+    @DisplayName("[삭제] 잘못된 회원이 접근하면, 삭제 없이 예외를 던짐(soft delete)")
     @Test
-    void givenWrongId_whenDeleting_thenThrowsExceptionSoftVer() {
+    void givenWrongMemberAndModifiedMemberInfo_whenDeletingMember_thenThrowsExceptionSoftVer() {
         //Given
-        Long wrongMemberId = 1L;
-        given(memberRepository.findById(wrongMemberId)).willReturn(Optional.empty());
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        MemberDto dto = createRequestMemberDto(MEMBER_ID);
 
         // When
-        Throwable t = catchThrowable(() -> memberService.softDeleteMember(wrongMemberId));
+        Throwable t = catchThrowable(() -> memberService.softDeleteMember(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(NO_MEMBER + wrongMemberId);
-        then(memberRepository).should().findById(wrongMemberId);
+                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
     }
 
     @DisplayName("[삭제] id를 입력하면, 회원을 삭제(hard delete)")
     @Test
     void givenMemberId_whenDeleting_thenDeletesMemberHardVer() {
         //Given
-        Long memberId = 1L;
-        Member member = createMember(memberId);
-        given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+        Member member = createMember();
+        MemberDto memberDto = createRequestMemberDto(MEMBER_ID);
+
+        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
+        willDoNothing().given(memberRepository).delete(member);
 
         // When
-        memberService.hardDeleteMember(memberId);
+        memberService.hardDeleteMember(memberDto);
 
         // Then
-        then(memberRepository).should().findById(memberId);
+        then(memberRepository).should().findById(MEMBER_ID);
         then(memberRepository).should().delete(member);
     }
 
-    @DisplayName("[삭제] 잘못된 id를 입력하면, 삭제(hard delete) 없이 예외를 던짐")
+    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(hard delete)")
     @Test
-    void givenWrongId_whenDeleting_thenThrowsExceptionHardVer() {
+    void givenWrongMemberAndModifiedMemberInfo_whenDeletingMember_thenThrowsExceptionHardVer() {
         //Given
-        Long wrongMemberId = 1L;
-        given(memberRepository.findById(wrongMemberId)).willReturn(Optional.empty());
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        MemberDto dto = createRequestMemberDto(MEMBER_ID);
 
         // When
-        Throwable t = catchThrowable(() -> memberService.hardDeleteMember(wrongMemberId));
+        Throwable t = catchThrowable(() -> memberService.hardDeleteMember(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(NO_MEMBER + wrongMemberId);
-        then(memberRepository).should().findById(wrongMemberId);
+                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
     }
-
     /*
     @DisplayName("[] ")
     @Test
@@ -281,27 +295,4 @@ class MemberServiceTest {
 
     }
  */
-    private Member createMember(Long id) {
-        Member member = Member.builder()
-                .email("boldfaced7@email.com")
-                .nickname("nickname")
-                .password("password")
-                .build();
-
-        ReflectionTestUtils.setField(member, "id", id);
-        return member;
-    }
-
-
-    private MemberDto createMemberDto(Long id) {
-        return new MemberDto(createMember(id));
-    }
-
-    private MemberDto createMemberDto(String nickname) {
-        return MemberDto.builder()
-                .nickname(nickname)
-                .build();
-    }
-
-
 }

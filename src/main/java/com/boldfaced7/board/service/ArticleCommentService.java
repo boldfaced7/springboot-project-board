@@ -1,10 +1,16 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
+import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
+import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,9 +25,12 @@ public class ArticleCommentService {
 
     private final ArticleRepository articleRepository;
     private final ArticleCommentRepository articleCommentRepository;
+    private final MemberRepository memberRepository;
 
-    private static final String NO_ARTICLE_MESSAGE = "게시글이 없습니다 - articleId: ";
-    private static final String NO_ARTICLE_COMMENT_MESSAGE = "댓글이 없습니다 - articleCommentId: ";
+    public static final String NO_ARTICLE_MESSAGE = "게시글이 없습니다 - articleId: ";
+    public static final String NO_ARTICLE_COMMENT_MESSAGE = "댓글이 없습니다 - articleCommentId: ";
+    public static final String NO_MEMBER_MESSAGE = "회원을 찾을 수 없습니다 - memberId: ";
+
 
     @Transactional(readOnly = true)
     public List<ArticleCommentDto> getArticleComments() {
@@ -31,10 +40,19 @@ public class ArticleCommentService {
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleCommentDto> getArticleComments(Long articleId) {
-        Article article = findArticleById(articleId);
+    public List<ArticleCommentDto> getArticleComments(ArticleDto articleDto) {
+        Article article = findArticleById(articleDto.getArticleId());
 
         return articleCommentRepository.findAllByArticle(article).stream()
+                .map(ArticleCommentDto::new)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
+        Member member = findMemberById(memberDto.getMemberId());
+
+        return articleCommentRepository.findAllByMember(member).stream()
                 .map(ArticleCommentDto::new)
                 .toList();
     }
@@ -46,23 +64,39 @@ public class ArticleCommentService {
     }
 
     public Long saveArticleComment(ArticleCommentDto dto) {
+        Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
+
+        Member member = findMemberById(memberId);
         Article article = findArticleById(dto.getArticleId());
-        return articleCommentRepository.save(dto.toEntity(article)).getId();
+
+        return articleCommentRepository.save(dto.toEntityForSaving(article, member)).getId();
     }
 
-    public void updateArticleComment(Long articleCommentId, ArticleCommentDto dto) {
-        ArticleComment articleComment = findArticleCommentById(articleCommentId);
-        articleComment.update(dto.toEntity());
+    public void updateArticleComment(ArticleCommentDto dto) {
+        ArticleComment articleComment = findArticleCommentByDto(dto);
+        authorizeAuthor(articleComment);
+        articleComment.update(dto.toEntityForUpdating());
     }
 
-    public void softDeleteArticleComment(Long articleCommentId) {
-        ArticleComment articleComment = findArticleCommentById(articleCommentId);
+    public void softDeleteArticleComment(ArticleCommentDto dto) {
+        ArticleComment articleComment = findArticleCommentByDto(dto);
+        authorizeAuthor(articleComment);
         articleComment.deactivate();
     }
 
-    public void hardDeleteArticleComment(Long articleCommentId) {
-        ArticleComment articleComment = findArticleCommentById(articleCommentId);
+    public void hardDeleteArticleComment(ArticleCommentDto dto) {
+        ArticleComment articleComment = findArticleCommentByDto(dto);
+        authorizeAuthor(articleComment);
         articleCommentRepository.delete(articleComment);
+    }
+
+    private ArticleComment findArticleCommentById(Long articleCommentId) {
+        return articleCommentRepository.findById(articleCommentId)
+                .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_COMMENT_MESSAGE + articleCommentId));
+    }
+
+    private ArticleComment findArticleCommentByDto(ArticleCommentDto articleCommentDto) {
+        return findArticleCommentById(articleCommentDto.getArticleCommentId());
     }
 
     private Article findArticleById(Long articleId) {
@@ -70,8 +104,15 @@ public class ArticleCommentService {
                 .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_MESSAGE + articleId));
     }
 
-    private ArticleComment findArticleCommentById(Long articleCommentId) {
-        return articleCommentRepository.findById(articleCommentId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_COMMENT_MESSAGE + articleCommentId));
+    private Member findMemberById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException(NO_MEMBER_MESSAGE + memberId));
+    }
+
+    private void authorizeAuthor(ArticleComment articleComment) {
+        AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
+        if (authInfo == null || !authInfo.getMemberId().equals(articleComment.getMember().getId())) {
+            throw new EntityNotFoundException(NO_ARTICLE_COMMENT_MESSAGE + articleComment.getId());
+        }
     }
 }

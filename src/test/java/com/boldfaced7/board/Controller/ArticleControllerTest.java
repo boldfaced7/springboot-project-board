@@ -1,23 +1,30 @@
 package com.boldfaced7.board.Controller;
 
-import com.boldfaced7.board.dto.ArticleCommentDto;
+import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.request.ArticleRequest;
 import com.google.gson.Gson;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.boldfaced7.board.TestUtil.*;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @DisplayName("API 컨트롤러 - 게시글")
@@ -26,8 +33,40 @@ class ArticleControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired Gson gson;
-    @MockBean private ArticleService articleService;
-    final String urlTemplate = "/api/articles";
+    @Autowired WebApplicationContext webApplicationContext;
+    @MockBean  ArticleService articleService;
+    MockHttpSession session;
+
+    @BeforeEach
+    void setUp() {
+        session = new MockHttpSession();
+        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
+
+        mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .alwaysDo(print()) // 모든 요청에 대해 print() 적용
+                .build();
+    }
+    @DisplayName("[API][GET] 회원 연관 게시글 리스트 조회 - 정상 호출")
+    @Test
+    void givenMemberId_whenRequestingArticles_thenReturnsArticlesJsonResponse() throws Exception {
+        // Given
+        ArticleDto articleDto = createArticleDto();
+        MemberDto memberDto = new MemberDto(MEMBER_ID);
+        given(articleService.getArticles(memberDto)).willReturn(List.of(articleDto));
+
+        // When & Then
+        mvc.perform(get(memberArticleUrl(memberDto.getMemberId()))
+                        .session(session)
+                )
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.articles[0].articleId").value(articleDto.getArticleId()))
+                .andExpect(jsonPath("$.articles[0].content").value(articleDto.getContent()))
+                .andExpect(jsonPath("$.articles[0].articleId").value(articleDto.getArticleId()))
+                .andExpect(jsonPath("$.articles[0].author").value(articleDto.getAuthor()));
+
+        then(articleService).should().getArticles(memberDto);
+    }
 
     @DisplayName("[API][GET] 게시글 리스트 조회 - 정상 호출")
     @Test
@@ -37,7 +76,9 @@ class ArticleControllerTest {
         given(articleService.getArticles()).willReturn(List.of(articleDto));
 
         // When & Then
-        mvc.perform(get(urlTemplate))
+        mvc.perform(get(articleUrl())
+                        .session(session)
+                )
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.articles[0].articleId").value(articleDto.getArticleId()))
@@ -52,12 +93,13 @@ class ArticleControllerTest {
     @Test
     void givenNothing_whenRequestingArticle_thenReturnsArticleJsonResponse() throws Exception {
         // Given
-        Long articleId = 1L;
         ArticleDto articleDto = createArticleDto();
-        given(articleService.getArticle(articleId)).willReturn(articleDto);
+        given(articleService.getArticle(ARTICLE_ID)).willReturn(articleDto);
 
         // When & Then
-        mvc.perform(get(urlTemplate + "/" + articleId))
+        mvc.perform(get(articleUrl(ARTICLE_ID))
+                        .session(session)
+                )
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.articleId").value(articleDto.getArticleId()))
@@ -65,60 +107,63 @@ class ArticleControllerTest {
                 .andExpect(jsonPath("$.content").value(articleDto.getContent()))
                 .andExpect(jsonPath("$.author").value(articleDto.getAuthor()));
 
-        then(articleService).should().getArticle(articleId);
+        then(articleService).should().getArticle(ARTICLE_ID);
     }
 
     @DisplayName("[API][POST] 새 게시글 등록 - 정상 호출")
     @Test
-    void givenNewArticleInfo_whenRequestingSaving_thenSavesNewArticle() throws Exception {
+    void givenAuthorizedMemberAndNewArticleInfo_whenRequestingSaving_thenSavesNewArticle() throws Exception {
         // Given
-        Long articleId = 1L;
         ArticleRequest articleRequest = createArticleRequest();
         ArticleDto articleDto = articleRequest.toDto();
-        given(articleService.saveArticle(articleDto)).willReturn(articleId);
+        given(articleService.saveArticle(articleDto)).willReturn(ARTICLE_ID);
 
         // When & Then
-        mvc.perform(post(urlTemplate)
-                        .contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post(articleUrl())
+                        .session(session)
                         .content(gson.toJson(articleRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
                 )
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(redirectedUrl(articleUrl(ARTICLE_ID)));
         then(articleService).should().saveArticle(articleDto);
     }
 
     @DisplayName("[API][PATCH] 게시글 수정 - 정상 호출")
     @Test
-    void givenModifiedArticleInfo_whenRequestingUpdating_thenUpdatesArticle() throws Exception {
+    void givenAuthorizedMemberAndModifiedArticleInfo_whenRequestingUpdating_thenUpdatesArticle() throws Exception {
         // Given
-        Long articleId = 1L;
         ArticleRequest articleRequest = createArticleRequest();
-        ArticleDto articleDto = articleRequest.toDto();
-        willDoNothing().given(articleService).updateArticle(articleId, articleDto);
+        ArticleDto articleDto = articleRequest.toDto(ARTICLE_ID);
+        willDoNothing().given(articleService).updateArticle(articleDto);
 
         // When & Then
-        mvc.perform(patch(urlTemplate + "/" + articleId)
-                        .contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(patch(articleUrl(ARTICLE_ID))
+                        .session(session)
                         .content(gson.toJson(articleRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isOk());
-        then(articleService).should().updateArticle(articleId, articleDto);
+        then(articleService).should().updateArticle(articleDto);
     }
 
     @DisplayName("[API][DELETE] 게시글 삭제 - 정상 호출")
     @Test
-    void given_when_then() throws Exception {
+    void givenAuthorizedMemberAndArticleId_whenRequestingDeleting_thenDeletesArticle() throws Exception {
         // Given
-        Long articleId = 1L;
-        willDoNothing().given(articleService).softDeleteArticle(articleId);
+        ArticleDto articleDto = createArticleDto(ARTICLE_ID);
+
+        willDoNothing().given(articleService).softDeleteArticle(articleDto);
 
         // When & Then
-        mvc.perform(delete(urlTemplate + "/" + articleId))
+        mvc.perform(delete(articleUrl(ARTICLE_ID))
+                        .session(session))
                 .andExpect(status().isOk());
-        then(articleService).should().softDeleteArticle(articleId);
+        then(articleService).should().softDeleteArticle(articleDto);
     }
 
     /*
-    @DisplayName("")
+    @DisplayName("[API][]  - 정상 호출")
     @Test
     void given_when_then() throws Exception {
         // Given
@@ -127,35 +172,4 @@ class ArticleControllerTest {
 
     }
      */
-
-    private ArticleDto createArticleDto() {
-        return ArticleDto.builder()
-                .articleId(1L)
-                .title("title")
-                .content("content")
-                .author("boldfaced7")
-                .createdAt(LocalDateTime.now())
-                .modifiedAt(LocalDateTime.now())
-                .articleComments(List.of(createArticleCommentDto()))
-                .build();
-    }
-
-    private ArticleCommentDto createArticleCommentDto() {
-        return ArticleCommentDto.builder()
-                .articleCommentId(1L)
-                .articleId(1L)
-                .content("content")
-                .author("boldfaced7")
-                .createdAt(LocalDateTime.now())
-                .modifiedAt(LocalDateTime.now())
-                .build();
-    }
-
-    private ArticleRequest createArticleRequest() {
-        return ArticleRequest.builder()
-                .title("title")
-                .content("content")
-                .author("author")
-                .build();
-    }
 }

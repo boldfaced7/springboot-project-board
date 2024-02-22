@@ -12,29 +12,26 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-@RequestMapping("/api/members")
+@RequestMapping("/api")
 @RestController
 @RequiredArgsConstructor
 public class MemberController {
 
     private final MemberService memberService;
-    private final String urlTemplate = "/api/members";
 
-    @GetMapping
+    @GetMapping("/members")
     public ResponseEntity<MemberListResponse> getMembers() {
-        List<MemberResponse> members = memberService.getMembers()
-                .stream()
-                .map(MemberResponse::new)
-                .toList();
-
+        List<MemberDto> members = memberService.getMembers();
         MemberListResponse response = new MemberListResponse(members);
 
         return ResponseEntity.ok()
                 .body(response);
     }
 
-    @GetMapping("/{memberId}")
-    public ResponseEntity<MemberResponse> getMember(@PathVariable Long memberId) {
+    @GetMapping("/members/{memberId}")
+    public ResponseEntity<MemberResponse> getMember(
+            @PathVariable Long memberId) {
+
         MemberDto member = memberService.getMember(memberId);
         MemberResponse response = new MemberResponse(member);
 
@@ -42,26 +39,40 @@ public class MemberController {
                 .body(response);
     }
 
-    @PostMapping
-    private ResponseEntity<Void> postNewMember(@RequestBody MemberRequest memberRequest) {
+    @PostMapping("/signUp")
+    private ResponseEntity<Void> postNewMember(
+            @RequestBody MemberRequest memberRequest) {
+
         Long memberId = memberService.saveMember(memberRequest.toDto());
 
-        return ResponseEntity.created(URI.create(urlTemplate + "/" + memberId)).build();
+        return ResponseEntity.created(URI.create(createUrl(memberId))).build();
     }
 
-    @PatchMapping("/{memberId}")
-    private ResponseEntity<Void> updateMember(
+    @PatchMapping("/members/{memberId}")
+    private ResponseEntity<Void> updateMemberInfo(
             @PathVariable Long memberId,
             @RequestBody MemberRequest memberRequest) {
-        memberService.updateMember(memberId, memberRequest.toDto());
+
+        MemberDto dto = memberRequest.toDto(memberId);
+        memberService.updateMember(dto);
 
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{memberId}")
-    public ResponseEntity<Void> deleteMember(@PathVariable Long memberId) {
-        memberService.softDeleteMember(memberId);
+    @DeleteMapping("/members/{memberId}")
+    public ResponseEntity<Void> deleteMember(
+            @PathVariable Long memberId) {
+
+        MemberDto dto = MemberDto.builder()
+                .memberId(memberId)
+                .build();
+
+        memberService.softDeleteMember(dto);
 
         return ResponseEntity.ok().build();
+    }
+
+    private String createUrl(Long memberId) {
+        return "/api/members/" + memberId;
     }
 }

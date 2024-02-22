@@ -15,18 +15,20 @@ import java.time.LocalDateTime;
 public class ArticleCommentResponse {
 
     private Long articleCommentId;
+    private Long articleId;
+    private Long memberId;
     private String content;
     private String author;
-    private Long articleId;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
     public ArticleCommentResponse(ArticleCommentDto dto) {
-        this.articleCommentId = dto.getArticleCommentId();
-        this.content = dto.getContent();
-        this.author = dto.getAuthor();
-        this.articleId = dto.getArticleId();
-        this.createdAt = dto.getCreatedAt();
-        this.modifiedAt = dto.getModifiedAt();
+        articleCommentId = dto.getArticleCommentId();
+        memberId = dto.getMemberId();
+        content = dto.getContent();
+        author = dto.getAuthor();
+        articleId = dto.getArticleId();
+        createdAt = dto.getCreatedAt();
+        modifiedAt = dto.getModifiedAt();
     }
 }

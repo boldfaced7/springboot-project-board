@@ -35,6 +35,10 @@ public class Member extends BaseTimeEntity {
         this.nickname = nickname;
     }
 
+    public boolean isCorrectPassword(String password) {
+        return this.password.equals(password);
+    }
+
     public void updatePassword(String password) {
         this.password = password;
     }

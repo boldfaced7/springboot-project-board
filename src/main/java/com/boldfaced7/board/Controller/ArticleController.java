@@ -1,6 +1,7 @@
 package com.boldfaced7.board.Controller;
 
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.ArticleListResponse;
 import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.request.ArticleRequest;
@@ -12,29 +13,40 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-@RequestMapping("/api/articles")
+
+@RequestMapping("/api")
 @RestController
 @RequiredArgsConstructor
 public class ArticleController {
 
     private final ArticleService articleService;
-    private final String urlTemplate = "/api/articles";
 
-    @GetMapping
+    @GetMapping("/articles")
     public ResponseEntity<ArticleListResponse> getArticles() {
-        List<ArticleResponse> articles = articleService.getArticles()
-                .stream()
-                .map(ArticleResponse::new)
-                .toList();
 
-        ArticleListResponse articleListResponse = new ArticleListResponse(articles);
+        List<ArticleDto> articles = articleService.getArticles();
+        ArticleListResponse response = new ArticleListResponse(articles);
 
         return ResponseEntity.ok()
-                .body(articleListResponse);
+                .body(response);
     }
 
-    @GetMapping("/{articleId}")
-    public ResponseEntity<ArticleResponse> getArticle(@PathVariable Long articleId) {
+    @GetMapping("/members/{memberId}/articles")
+    public ResponseEntity<ArticleListResponse> getArticles(
+            @PathVariable Long memberId) {
+
+        MemberDto dto = new MemberDto(memberId);
+        List<ArticleDto> articles = articleService.getArticles(dto);
+        ArticleListResponse response = new ArticleListResponse(articles);
+
+        return ResponseEntity.ok()
+                .body(response);
+    }
+
+    @GetMapping("/articles/{articleId}")
+    public ResponseEntity<ArticleResponse> getArticle(
+            @PathVariable Long articleId) {
+
         ArticleDto dto = articleService.getArticle(articleId);
         ArticleResponse response = new ArticleResponse(dto);
 
@@ -42,24 +54,42 @@ public class ArticleController {
                 .body(response);
     }
 
-    @PostMapping
-    private ResponseEntity<Void> postNewArticle(@RequestBody ArticleRequest articleRequest) {
-        Long articleId = articleService.saveArticle(articleRequest.toDto());
+    @PostMapping("/articles")
+    private ResponseEntity<Void> postNewArticle(
+            @RequestBody ArticleRequest articleRequest) {
 
-        return ResponseEntity.created(URI.create(urlTemplate + "/" + articleId)).build();
+        ArticleDto dto = articleRequest.toDto();
+        Long articleId = articleService.saveArticle(dto);
+
+        return ResponseEntity.created(URI.create(createUrl(articleId))).build();
     }
 
-    @PatchMapping("/{articleId}")
-    public ResponseEntity<Void> updateArticle(@PathVariable Long articleId, @RequestBody ArticleRequest articleRequest) {
-        articleService.updateArticle(articleId, articleRequest.toDto());
+    @PatchMapping("/articles/{articleId}")
+    public ResponseEntity<Void> updateArticle(
+            @PathVariable Long articleId,
+            @RequestBody ArticleRequest articleRequest) {
+
+        ArticleDto dto = articleRequest.toDto(articleId);
+        articleService.updateArticle(dto);
 
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{articleId}")
-    public ResponseEntity<Void> deleteArticle(@PathVariable Long articleId) {
-        articleService.softDeleteArticle(articleId);
+    @DeleteMapping("/articles/{articleId}")
+    public ResponseEntity<Void> deleteArticle(
+            @PathVariable Long articleId) {
+
+        ArticleDto dto = ArticleDto.builder()
+                .articleId(articleId)
+                .build();
+
+        articleService.softDeleteArticle(dto);
 
         return ResponseEntity.ok().build();
     }
+
+    private String createUrl(Long articleId) {
+        return "/api/articles/" + articleId;
+    }
+
 }

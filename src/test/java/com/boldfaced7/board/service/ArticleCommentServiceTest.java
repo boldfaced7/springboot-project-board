@@ -1,22 +1,29 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
+import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
+import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
 
+import static com.boldfaced7.board.TestUtil.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
@@ -27,16 +34,23 @@ class ArticleCommentServiceTest {
     @InjectMocks private ArticleCommentService articleCommentService;
     @Mock private ArticleCommentRepository articleCommentRepository;
     @Mock private ArticleRepository articleRepository;
+    @Mock private MemberRepository memberRepository;
+
+    @BeforeEach
+    void setUp() {
+        AuthInfoHolder.setAuthInfo(createAuthResponse());
+    }
+
+    @AfterEach
+    void clear() {
+        AuthInfoHolder.releaseAuthInfo();
+    }
 
     @DisplayName("[조회] 댓글 목록을 반환")
     @Test
     void givenNothing_whenSearchingArticleComments_thenReturnsArticleComments() {
         //Given
-        Long articleId = 1L;
-        Article article = createArticle(articleId);
-
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId, article);
+        ArticleComment articleComment = createArticleComment();
         given(articleCommentRepository.findAll()).willReturn(List.of(articleComment));
 
         // When
@@ -51,21 +65,19 @@ class ArticleCommentServiceTest {
     @Test
     void givenArticleId_whenSearchingArticleComments_thenReturnsArticleComments() {
         //Given
-        Long articleId = 1L;
-        Article article = createArticle(articleId);
+        ArticleComment articleComment = createArticleComment();
+        Article article = articleComment.getArticle();
+        ArticleDto articleDto = new ArticleDto(ARTICLE_ID);
 
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId, article);
-
-        given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
+        given(articleRepository.findById(articleDto.getArticleId())).willReturn(Optional.of(article));
         given(articleCommentRepository.findAllByArticle(article)).willReturn(List.of(articleComment));
 
         // When
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(articleId);
+        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(articleDto);
 
         // Then
         assertThat(articleComments).isNotEmpty();
-        then(articleRepository).should().findById(articleId);
+        then(articleRepository).should().findById(ARTICLE_ID);
         then(articleCommentRepository).should().findAllByArticle(article);
     }
 
@@ -73,49 +85,85 @@ class ArticleCommentServiceTest {
     @Test
     void givenWrongArticleId_whenSearchingArticleComments_thenThrowsException() {
         //Given
-        Long articleId = 1L;
         Long wrongArticleId = 2L;
-        Article article = createArticle(articleId);
+        ArticleDto articleDto = new ArticleDto(wrongArticleId);
 
-        given(articleRepository.findById(wrongArticleId)).willReturn(Optional.empty());
+        given(articleRepository.findById(articleDto.getArticleId())).willReturn(Optional.empty());
 
         // When
-        Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(wrongArticleId));
+        Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(articleDto));
 
         // Then
-        assertThat(wrongArticleId).isNotEqualTo(articleId);
+        assertThat(wrongArticleId).isNotEqualTo(ARTICLE_ID);
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("게시글이 없습니다 - articleId: " + wrongArticleId);
+                .hasMessage(ArticleCommentService.NO_ARTICLE_MESSAGE + wrongArticleId);
         then(articleRepository).should().findById(wrongArticleId);
+    }
+
+    @DisplayName("[조회] 회원이 접근하면, 해당 회원의 댓글 목록을 반환")
+    @Test
+    void givenMemberId_whenSearchingArticleComments_thenReturnsArticleComments() {
+        ArticleComment articleComment = createArticleComment();
+        Member member = articleComment.getMember();
+        MemberDto memberDto = new MemberDto(MEMBER_ID);
+
+        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
+        given(articleCommentRepository.findAllByMember(member)).willReturn(List.of(articleComment));
+
+        // When
+        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(memberDto);
+
+        // Then
+        assertThat(articleComments).isNotEmpty();
+        then(memberRepository).should().findById(MEMBER_ID);
+        then(articleCommentRepository).should().findAllByMember(member);
+
+    }
+
+    @DisplayName("[조회] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
+    @Test
+    void givenWrongMember_whenSearchingArticleComments_thenThrowsException() {
+        //Given
+        Long wrongMemberId = 2L;
+        MemberDto memberDto = new MemberDto(wrongMemberId);
+
+
+        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.empty());
+
+        // When
+        Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(memberDto));
+
+        // Then
+        assertThat(t)
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage(ArticleCommentService.NO_MEMBER_MESSAGE + wrongMemberId);
+        then(memberRepository).should().findById(wrongMemberId);
     }
 
     @DisplayName("[조회] id를 입력하면, 댓글을 반환")
     @Test
     void givenArticleCommentId_whenSearchingArticleComment_thenReturnsArticleComment() {
         //Given
-        Long articleId = 1L;
-        Article article = createArticle(articleId);
+        ArticleComment articleComment = createArticleComment();
 
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId, article);
-
-        given(articleCommentRepository.findById(articleCommentId)).willReturn(Optional.of(articleComment));
+        given(articleCommentRepository.findById(articleComment.getId())).willReturn(Optional.of(articleComment));
 
         // When
-        ArticleCommentDto dto = articleCommentService.getArticleComment(articleCommentId);
+        ArticleCommentDto dto = articleCommentService.getArticleComment(ARTICLE_COMMENT_ID);
 
         // Then
         assertThat(dto)
                 .hasFieldOrPropertyWithValue("content", articleComment.getContent());
-        then(articleCommentRepository).should().findById(articleCommentId);
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
     @DisplayName("[조회] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
     @Test
     void givenWrongArticleCommentId_whenSearchingArticleComment_thenThrowsException() {
         //Given
-        Long wrongArticleCommentId = 1L;
+        Long wrongArticleCommentId = 2L;
+
         given(articleCommentRepository.findById(wrongArticleCommentId)).willReturn(Optional.empty());
 
         // When
@@ -124,7 +172,7 @@ class ArticleCommentServiceTest {
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("댓글이 없습니다 - articleCommentId: " + wrongArticleCommentId);
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + wrongArticleCommentId);
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
     }
@@ -133,60 +181,88 @@ class ArticleCommentServiceTest {
     @Test
     void givenArticleCommentInfo_whenSavingArticleComment_thenSavesArticleComment() {
         //Given
-        Long articleId = 1L;
-        Article article = createArticle(articleId);
+        ArticleCommentDto dto = createArticleCommentDto();
+        dto.setArticleId(ARTICLE_ID);
+        dto.setMemberId(MEMBER_ID);
 
-        Long articleCommentId = 1L;
-        ArticleCommentDto dto = createArticleCommentDto(articleId);
-
-        given(articleRepository.findById(articleId)).willReturn(Optional.of(article));
-        given(articleCommentRepository.save(any(ArticleComment.class)))
-                .willReturn(createArticleComment(1L, article));
+        given(memberRepository.findById(dto.getMemberId())).willReturn(Optional.of(createMember()));
+        given(articleRepository.findById(dto.getArticleId())).willReturn(Optional.of(createArticle()));
+        given(articleCommentRepository.save(dto.toEntityForUpdating()))
+                .willReturn(createArticleComment());
 
         // When
         Long returnedArticleCommentId = articleCommentService.saveArticleComment(dto);
 
         // Then
-        assertThat(returnedArticleCommentId).isEqualTo(articleCommentId);
-        then(articleRepository).should().findById(articleId);
+        assertThat(returnedArticleCommentId).isNotNull();
+        then(memberRepository).should().findById(MEMBER_ID);
+        then(articleRepository).should().findById(ARTICLE_ID);
         then(articleCommentRepository).should().save(any(ArticleComment.class));
     }
 
-    @DisplayName("id와 댓글 수정 정보를 입력하면, 댓글을 수정")
+    @DisplayName("[수정] id와 댓글 수정 정보를 입력하면, 댓글을 수정")
     @Test
     void givenArticleCommentIdAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenUpdatesArticleComment() {
         //Given
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId);
-        ArticleCommentDto dto = createArticleCommentDto("new content");
-        given(articleCommentRepository.findById(articleCommentId)).willReturn(Optional.of(articleComment));
+        ArticleComment articleComment = createArticleComment();
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+        dto.setContent("new content");
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
 
         // When
-        articleCommentService.updateArticleComment(articleCommentId, dto);
+        articleCommentService.updateArticleComment(dto);
 
         // Then
         assertThat(articleComment)
                 .hasFieldOrPropertyWithValue("content", dto.getContent());
-        then(articleCommentRepository).should().findById(articleCommentId);
+
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
     @DisplayName("[수정] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
     @Test
     void givenWrongArticleCommentIdAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenThrowsException() {
         //Given
-        Long wrongArticleCommentId = 1L;
-        ArticleCommentDto dto = createArticleCommentDto("new content");
-        given(articleCommentRepository.findById(wrongArticleCommentId)).willReturn(Optional.empty());
+        Long wrongArticleCommentId = 2L;
+        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
+        dto.setContent("new content");
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
 
         // When
-        Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(wrongArticleCommentId, dto));
+        Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("댓글이 없습니다 - articleCommentId: " + wrongArticleCommentId);
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
+    }
+
+    @DisplayName("[수정] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
+    @Test
+    void givenWrongMemberAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenThrowsException() {
+        //Given
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+        dto.setContent("new content");
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId()))
+                .willReturn(Optional.of(createArticleComment()));
+
+        // When
+        Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(dto));
+
+        // Then
+        assertThat(t)
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
 
@@ -194,51 +270,79 @@ class ArticleCommentServiceTest {
     @Test
     void givenArticleCommentId_whenDeletingArticleComment_thenDeletesArticleCommentSoftVer() {
         //Given
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId);
-        given(articleCommentRepository.findById(articleCommentId)).willReturn(Optional.of(articleComment));
+        ArticleComment articleComment = createArticleComment();
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
 
         // When
-        articleCommentService.softDeleteArticleComment(articleCommentId);
+        articleCommentService.softDeleteArticleComment(dto);
 
         // Then
         assertThat(articleComment)
                 .hasFieldOrPropertyWithValue("isActive", false);
-        then(articleCommentRepository).should().findById(articleCommentId);
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
     @DisplayName("[삭제] 잘못된 id를 입력하면, 반환 없이 예외를 던짐(soft delete)")
     @Test
     void givenArticleCommentId_whenDeletingArticleComment_thenThrowsExceptionSoftVer() {
         //Given
-        Long wrongArticleCommentId = 1L;
-        given(articleCommentRepository.findById(wrongArticleCommentId)).willReturn(Optional.empty());
+        Long wrongArticleCommentId = 2L;
+        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
 
         // When
-        Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(wrongArticleCommentId));
+        Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("댓글이 없습니다 - articleCommentId: " + wrongArticleCommentId);
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + wrongArticleCommentId);
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
+    }
+
+    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(soft delete)")
+    @Test
+    void givenWrongMemberAndModifiedArticleCommentInfo_whenDeletingArticleComment_thenThrowsExceptionSoftVer() {
+        //Given
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+        dto.setContent("new content");
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId()))
+                .willReturn(Optional.of(createArticleComment()));
+
+        // When
+        Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(dto));
+
+        // Then
+        assertThat(t)
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
     @DisplayName("[삭제] id를 입력하면, 댓글을 삭제(hard delete)")
     @Test
     void givenArticleCommentId_whenDeletingArticleComment_thenDeletesArticleCommentHardVer() {
         //Given
-        Long articleCommentId = 1L;
-        ArticleComment articleComment = createArticleComment(articleCommentId);
-        given(articleCommentRepository.findById(articleCommentId)).willReturn(Optional.of(articleComment));
+        ArticleComment articleComment = createArticleComment();
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
         willDoNothing().given(articleCommentRepository).delete(articleComment);
 
         // When
-        articleCommentService.hardDeleteArticleComment(articleCommentId);
+        articleCommentService.hardDeleteArticleComment(dto);
 
         // Then
-        then(articleCommentRepository).should().findById(articleCommentId);
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
         then(articleCommentRepository).should().delete(articleComment);
     }
 
@@ -246,18 +350,43 @@ class ArticleCommentServiceTest {
     @Test
     void givenArticleCommentId_whenDeletingArticleComment_thenThrowsExceptionHardVer() {
         //Given
-        Long wrongArticleCommentId = 1L;
-        given(articleCommentRepository.findById(wrongArticleCommentId)).willReturn(Optional.empty());
+        Long wrongArticleCommentId = 2L;
+        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
 
         // When
-        Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(wrongArticleCommentId));
+        Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(dto));
 
         // Then
         assertThat(t)
                 .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("댓글이 없습니다 - articleCommentId: " + wrongArticleCommentId);
-
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
+    }
+
+    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(hard delete)")
+    @Test
+    void givenWrongMemberAndModifiedArticleCommentInfo_whenDeletingArticleComment_thenThrowsExceptionHardVer() {
+        //Given
+        Long wrongMemberId = 2L;
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
+
+        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
+        dto.setContent("new content");
+
+        given(articleCommentRepository.findById(dto.getArticleCommentId()))
+                .willReturn(Optional.of(createArticleComment()));
+
+        // When
+        Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(dto));
+
+        // Then
+        assertThat(t)
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+
+        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
     /*
     @DisplayName("")
@@ -273,56 +402,4 @@ class ArticleCommentServiceTest {
 
     }
      */
-
-    private ArticleComment createArticleComment(Long id) {
-        ArticleComment articleComment = ArticleComment.builder()
-                .content("content")
-                .build();
-
-        ReflectionTestUtils.setField(articleComment, "id", id);
-        return articleComment;
-    }
-
-    private ArticleComment createArticleComment(Long id, Article article) {
-        ArticleComment articleComment = ArticleComment.builder()
-                .content("content")
-                .article(article)
-                .build();
-
-        ReflectionTestUtils.setField(articleComment, "id", id);
-        return articleComment;
-    }
-
-    private Article createArticle(Long id) {
-        Article article = Article.builder()
-                .title("title")
-                .content("content")
-                .build();
-
-        ReflectionTestUtils.setField(article, "id", id);
-
-        return article;
-    }
-
-    private ArticleCommentDto createArticleCommentDto() {
-        return ArticleCommentDto.builder()
-                .content("content")
-                .author("boldfaced7")
-                .build();
-    }
-
-    private ArticleCommentDto createArticleCommentDto(Long articleId) {
-        return ArticleCommentDto.builder()
-                .content("content")
-                .author("boldfaced7")
-                .articleId(articleId)
-                .build();
-    }
-
-    private ArticleCommentDto createArticleCommentDto(String content) {
-        return ArticleCommentDto.builder()
-                .content(content)
-                .author("boldfaced7")
-                .build();
-    }
 }

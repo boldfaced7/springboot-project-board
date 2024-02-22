@@ -2,23 +2,30 @@ package com.boldfaced7.board.Controller;
 
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.MemberRequest;
+import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.service.MemberService;
 import com.google.gson.Gson;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.boldfaced7.board.TestUtil.*;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,19 +35,31 @@ class MemberControllerTest {
 
     @Autowired MockMvc mvc;
     @Autowired Gson gson;
-    @MockBean private MemberService memberService;
+    @Autowired WebApplicationContext webApplicationContext;
+    @MockBean  MemberService memberService;
 
-    final String urlTemplate = "/api/members";
+    MockHttpSession session;
+
+    @BeforeEach
+    void setUp() {
+        session = new MockHttpSession();
+        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
+
+        mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .alwaysDo(print()) // 모든 요청에 대해 print() 적용
+                .build();
+    }
 
     @DisplayName("[API][GET] 회원 리스트 조회 - 정상 호출")
     @Test
     void givenNothing_whenRequestingMembers_thenReturnsMembersJsonResponse() throws Exception {
         // Given
-        MemberDto memberDto = createMemberDto();
+        MemberDto memberDto = createRequestMemberDto();
         given(memberService.getMembers()).willReturn(List.of(memberDto));
 
         // When & Then
-        mvc.perform(get(urlTemplate))
+        mvc.perform(get(memberUrl())
+                        .session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.members[0].memberId").value(memberDto.getMemberId()))
@@ -54,37 +73,37 @@ class MemberControllerTest {
     @Test
     void givenNothing_whenRequestingMember_thenReturnsMemberJsonResponse() throws Exception {
         // Given
-        Long memberId = 1L;
-        MemberDto memberDto = createMemberDto();
-        given(memberService.getMember(memberId)).willReturn(memberDto);
+        MemberDto memberDto = createRequestMemberDto();
+        given(memberService.getMember(MEMBER_ID)).willReturn(memberDto);
 
         // When & Then
-        mvc.perform(get(urlTemplate + "/" + memberId))
+        mvc.perform(get(memberUrl(MEMBER_ID))
+                        .session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.memberId").value(memberDto.getMemberId()))
                 .andExpect(jsonPath("$.email").value(memberDto.getEmail()))
                 .andExpect(jsonPath("$.nickname").value(memberDto.getNickname()));
 
-        then(memberService).should().getMember(memberId);
+        then(memberService).should().getMember(MEMBER_ID);
     }
 
     @DisplayName("[API][POST] 새 회원 등록 - 정상 호출")
     @Test
     void givenNewMemberInfo_whenRequestingSaving_thenSavesNewMember() throws Exception {
         // Given
-        Long memberId = 1L;
         MemberRequest memberRequest = createMemberRequest();
         MemberDto memberDto = memberRequest.toDto();
-        given(memberService.saveMember(memberDto)).willReturn(memberId);
+        given(memberService.saveMember(memberDto)).willReturn(MEMBER_ID);
 
         // When & Then
-        mvc.perform(post(urlTemplate)
-                        .contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/signUp")
+                        .session(session)
                         .content(gson.toJson(memberRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isCreated())
-                .andExpect(redirectedUrl(urlTemplate + "/" + memberId));
+                .andExpect(redirectedUrl(memberUrl(MEMBER_ID)));
 
         then(memberService).should().saveMember(memberDto);
     }
@@ -93,49 +112,29 @@ class MemberControllerTest {
     @Test
     void givenModifiedMemberInfo_whenRequestingUpdating_thenUpdatesMember() throws Exception {
         // Given
-        Long memberId = 1L;
         MemberRequest memberRequest = createMemberRequest();
-        MemberDto memberDto = memberRequest.toDto();
-        willDoNothing().given(memberService).updateMember(memberId, memberDto);
+        willDoNothing().given(memberService).updateMember(any(MemberDto.class));
 
         // When & Then
-        mvc.perform(patch(urlTemplate + "/" + memberId)
-                        .contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(patch(memberUrl(MEMBER_ID))
+                        .session(session)
                         .content(gson.toJson(memberRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isOk());
-        then(memberService).should().updateMember(memberId, memberDto);
+        then(memberService).should().updateMember(any(MemberDto.class));
     }
 
     @DisplayName("[API][DELETE] 회원 삭제 - 정상 호출")
     @Test
     void givenMemberId_whenRequestingDeleting_thenDeletesMember() throws Exception {
         // Given
-        Long memberId = 1L;
-        willDoNothing().given(memberService).softDeleteMember(memberId);
+        willDoNothing().given(memberService).softDeleteMember(any());
 
         // When & Then
-        mvc.perform(delete(urlTemplate + "/" + memberId))
+        mvc.perform(delete(memberUrl(MEMBER_ID))
+                        .session(session))
                 .andExpect(status().isOk());
-        then(memberService).should().softDeleteMember(memberId);
+        then(memberService).should().softDeleteMember(any());
     }
-
-    private MemberDto createMemberDto() {
-        return MemberDto.builder()
-                .memberId(1L)
-                .email("boldfaced7@email.com")
-                .nickname("nickname")
-                .createdAt(LocalDateTime.now())
-                .modifiedAt(LocalDateTime.now())
-                .build();
-    }
-
-    private MemberRequest createMemberRequest() {
-        return MemberRequest.builder()
-                .email("boldfaced7@email.com")
-                .nickname("nickname")
-                .password("password")
-                .build();
-    }
-
 }

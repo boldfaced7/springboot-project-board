@@ -15,22 +15,24 @@ import java.util.List;
 @NoArgsConstructor
 public class ArticleResponse {
     private Long articleId;
+    private Long memberId;
     private String title;
     private String content;
     private String author;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
-    private List<ArticleCommentResponse> articleCommentResponses;
+    private List<ArticleCommentResponse> articleComments;
 
 
     public ArticleResponse(ArticleDto dto) {
-        this.articleId = dto.getArticleId();
-        this.title = dto.getTitle();
-        this.content = dto.getContent();
-        this.author = dto.getAuthor();
-        this.createdAt = dto.getCreatedAt();
-        this.modifiedAt = dto.getModifiedAt();
-        this.articleCommentResponses = dto.getArticleComments()
+        articleId = dto.getArticleId();
+        memberId = dto.getMemberId();
+        title = dto.getTitle();
+        content = dto.getContent();
+        author = dto.getAuthor();
+        createdAt = dto.getCreatedAt();
+        modifiedAt = dto.getModifiedAt();
+        articleComments = dto.getArticleComments()
                 .stream().map(ArticleCommentResponse::new).toList();
     }
 }

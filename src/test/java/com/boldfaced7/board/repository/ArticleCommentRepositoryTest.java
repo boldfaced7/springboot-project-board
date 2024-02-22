@@ -3,6 +3,7 @@ package com.boldfaced7.board.repository;
 import com.boldfaced7.board.config.JpaConfig;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Member;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Import;
 
 import java.util.List;
 
+import static com.boldfaced7.board.TestUtil.*;
 import static org.assertj.core.api.Assertions.*;
 
 @DisplayName("ArticleCommentRepository 테스트")
@@ -23,6 +25,7 @@ class ArticleCommentRepositoryTest {
 
     @Autowired private ArticleCommentRepository articleCommentRepository;
     @Autowired private ArticleRepository articleRepository;
+    @Autowired private MemberRepository memberRepository;
 
     @DisplayName("findById()가 isActive가 true인 ArticleComment 객체를 반환하는지 확인")
     @Test
@@ -109,6 +112,35 @@ class ArticleCommentRepositoryTest {
         assertThat(articleComments).isEmpty();
     }
 
+    @DisplayName("findAllByMember()가 isActive가 true인 Article 객체를 반환하는지 확인")
+    @Test
+    void givenMemberAndArticle_whenSelecting_thenWorksFine() {
+        //Given
+        Member member = memberRepository.save(createMember());
+        ArticleComment articleComment = articleCommentRepository.save(createArticleComment(member));
+
+        // When
+        List<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member);
+
+        // Then
+        assertThat(articleComments.get(0).isActive()).isTrue();
+    }
+
+    @DisplayName("findAllByMember()가 isActive가 false인 Article 객체를 반환하지 않는지 확인")
+    @Test
+    void givenMemberAndInactiveArticle_whenSelecting_thenWorksFine() {
+        //Given
+        Member member = memberRepository.save(createMember());
+        ArticleComment articleComment = articleCommentRepository.save(createArticleComment(member));
+        articleComment.deactivate();
+
+        // When
+        List<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member);
+
+        // Then
+        assertThat(articleComments).isEmpty();
+    }
+
     /*
     @DisplayName("")
     @Test
@@ -126,22 +158,37 @@ class ArticleCommentRepositoryTest {
 
     private ArticleComment createArticleComment() {
         return ArticleComment.builder()
-                .content("content")
+                .content(CONTENT)
                 .build();
     }
 
     private ArticleComment createArticleComment(Article article) {
         return ArticleComment.builder()
-                .content("content")
+                .content(CONTENT)
                 .article(article)
+                .build();
+    }
+
+    private ArticleComment createArticleComment(Member member) {
+        return ArticleComment.builder()
+                .content(CONTENT)
+                .member(member)
                 .build();
     }
 
     private Article createArticle() {
         return Article.builder()
-                .title("title")
-                .content("content")
+                .title(TITLE)
+                .content(CONTENT)
                 .build();
 
+    }
+
+    private Member createMember() {
+        return Member.builder()
+                .email(EMAIL)
+                .password(PASSWORD)
+                .nickname(NICKNAME)
+                .build();
     }
 }

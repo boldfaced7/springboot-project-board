@@ -23,12 +23,17 @@ public class ArticleComment extends BaseEntity {
     @JoinColumn(name = "article_id")
     private Article article;
 
+    @ManyToOne
+    @JoinColumn(name = "member_id")
+    private Member member;
+
     protected ArticleComment() {}
 
     @Builder
-    public ArticleComment(String content, Article article) {
+    public ArticleComment(String content, Article article, Member member) {
         this.content = content;
         this.article = article;
+        this.member = member;
     }
 
     public void updateContent(String content) {

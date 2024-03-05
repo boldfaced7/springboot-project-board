@@ -2,12 +2,14 @@ package com.boldfaced7.board.Controller;
 
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.dto.request.UpdateArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleListResponse;
 import com.boldfaced7.board.service.ArticleService;
-import com.boldfaced7.board.dto.request.ArticleRequest;
+import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -56,9 +58,9 @@ public class ArticleController {
 
     @PostMapping("/articles")
     private ResponseEntity<Void> postNewArticle(
-            @RequestBody ArticleRequest articleRequest) {
+            @RequestBody @Validated SaveArticleRequest saveArticleRequest) {
 
-        ArticleDto dto = articleRequest.toDto();
+        ArticleDto dto = saveArticleRequest.toDto();
         Long articleId = articleService.saveArticle(dto);
 
         return ResponseEntity.created(URI.create(createUrl(articleId))).build();
@@ -67,7 +69,7 @@ public class ArticleController {
     @PatchMapping("/articles/{articleId}")
     public ResponseEntity<Void> updateArticle(
             @PathVariable Long articleId,
-            @RequestBody ArticleRequest articleRequest) {
+            @RequestBody @Validated UpdateArticleRequest articleRequest) {
 
         ArticleDto dto = articleRequest.toDto(articleId);
         articleService.updateArticle(dto);

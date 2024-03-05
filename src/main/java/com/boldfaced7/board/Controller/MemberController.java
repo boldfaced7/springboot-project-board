@@ -1,12 +1,14 @@
 package com.boldfaced7.board.Controller;
 
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.request.MemberRequest;
+import com.boldfaced7.board.dto.request.SaveMemberRequest;
+import com.boldfaced7.board.dto.request.UpdateMemberNicknameRequest;
 import com.boldfaced7.board.dto.response.MemberListResponse;
 import com.boldfaced7.board.dto.response.MemberResponse;
 import com.boldfaced7.board.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -41,9 +43,9 @@ public class MemberController {
 
     @PostMapping("/signUp")
     private ResponseEntity<Void> postNewMember(
-            @RequestBody MemberRequest memberRequest) {
+            @RequestBody @Validated SaveMemberRequest saveMemberRequest) {
 
-        Long memberId = memberService.saveMember(memberRequest.toDto());
+        Long memberId = memberService.saveMember(saveMemberRequest.toDto());
 
         return ResponseEntity.created(URI.create(createUrl(memberId))).build();
     }
@@ -51,7 +53,7 @@ public class MemberController {
     @PatchMapping("/members/{memberId}")
     private ResponseEntity<Void> updateMemberInfo(
             @PathVariable Long memberId,
-            @RequestBody MemberRequest memberRequest) {
+            @RequestBody @Validated UpdateMemberNicknameRequest memberRequest) {
 
         MemberDto dto = memberRequest.toDto(memberId);
         memberService.updateMember(dto);

@@ -3,12 +3,14 @@ package com.boldfaced7.board.Controller;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.request.ArticleCommentRequest;
+import com.boldfaced7.board.dto.request.SaveArticleCommentRequest;
+import com.boldfaced7.board.dto.request.UpdateArticleCommentRequest;
 import com.boldfaced7.board.dto.response.ArticleCommentListResponse;
 import com.boldfaced7.board.dto.response.ArticleCommentResponse;
 import com.boldfaced7.board.service.ArticleCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -70,9 +72,9 @@ public class ArticleCommentController {
     @PostMapping("/articles/{articleId}/articleComments")
     public ResponseEntity<Void> postNewArticleComment(
             @PathVariable Long articleId,
-            @RequestBody ArticleCommentRequest articleCommentRequest) {
+            @RequestBody @Validated SaveArticleCommentRequest saveArticleCommentRequest) {
 
-        ArticleCommentDto dto = articleCommentRequest.toDto(articleId);
+        ArticleCommentDto dto = saveArticleCommentRequest.toDto(articleId);
         Long articleCommentId = articleCommentService.saveArticleComment(dto);
 
         return ResponseEntity.created(URI.create(createUrl(articleId, articleCommentId))).build();
@@ -82,9 +84,9 @@ public class ArticleCommentController {
                    "articles/{articleId}/articleComments/{articleCommentId}"})
     public ResponseEntity<Void> updateArticleComment(
             @PathVariable Long articleCommentId,
-            @RequestBody ArticleCommentRequest articleCommentRequest) {
+            @RequestBody @Validated UpdateArticleCommentRequest articleCommentRequest) {
 
-        ArticleCommentDto dto = articleCommentRequest.toDtoForUpdating(articleCommentId);
+        ArticleCommentDto dto = articleCommentRequest.toDto(articleCommentId);
         articleCommentService.updateArticleComment(dto);
 
         return ResponseEntity.ok().build();

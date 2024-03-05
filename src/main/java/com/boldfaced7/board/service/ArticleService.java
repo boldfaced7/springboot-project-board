@@ -7,6 +7,9 @@ import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
@@ -25,10 +28,6 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleCommentRepository articleCommentRepository;
     private final MemberRepository memberRepository;
-
-    public static final String NO_ARTICLE_MESSAGE = "게시글이 없습니다 - articleId: ";
-    public static final String NO_MEMBER_MESSAGE = "회원을 찾을 수 없습니다 - memberId: ";
-
 
     @Transactional(readOnly = true)
     public List<ArticleDto> getArticles() {
@@ -83,7 +82,7 @@ public class ArticleService {
 
     private Article findArticleById(Long articleId) {
         return articleRepository.findById(articleId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_MESSAGE + articleId));
+                .orElseThrow(ArticleNotFoundException::new);
     }
 
     private Article findArticleByDto(ArticleDto dto) {
@@ -92,7 +91,7 @@ public class ArticleService {
 
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_MEMBER_MESSAGE + memberId));
+                .orElseThrow(MemberNotFoundException::new);
     }
 
     private List<ArticleComment> findArticleCommentsByArticle(Article article) {
@@ -102,7 +101,7 @@ public class ArticleService {
     private void authorizeAuthor(Article article) {
         AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
         if (authInfo == null || !authInfo.getMemberId().equals(article.getMember().getId())) {
-            throw new EntityNotFoundException(NO_ARTICLE_MESSAGE + article.getId());
+            throw new ForbiddenException();
         }
     }
 }

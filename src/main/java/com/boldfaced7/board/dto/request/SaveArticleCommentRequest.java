@@ -1,7 +1,9 @@
 package com.boldfaced7.board.dto.request;
 
+import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.dto.ArticleCommentDto;
-import com.boldfaced7.board.dto.response.AuthResponse;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,23 +13,16 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ArticleCommentRequest {
+public class SaveArticleCommentRequest {
+
+    @NotBlank
+    @Size(max = ArticleComment.MAX_CONTENT_LENGTH)
     private String content;
-    private String author;
 
     public ArticleCommentDto toDto(Long articleId) {
         return ArticleCommentDto.builder()
                 .articleId(articleId)
                 .content(content)
-                .author(author)
-                .build();
-    }
-
-    public ArticleCommentDto toDtoForUpdating(Long targetId) {
-        return ArticleCommentDto.builder()
-                .articleCommentId(targetId)
-                .content(content)
-                .author(author)
                 .build();
     }
 }

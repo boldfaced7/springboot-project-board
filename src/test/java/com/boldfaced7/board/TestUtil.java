@@ -7,10 +7,7 @@ import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.AuthDto;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.request.ArticleCommentRequest;
-import com.boldfaced7.board.dto.request.ArticleRequest;
-import com.boldfaced7.board.dto.request.AuthRequest;
-import com.boldfaced7.board.dto.request.MemberRequest;
+import com.boldfaced7.board.dto.request.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -148,26 +145,49 @@ public class TestUtil {
     Request
      */
 
-    public static ArticleRequest createArticleRequest() {
-        return ArticleRequest.builder()
+    public static SaveArticleRequest createSaveArticleRequest() {
+        return SaveArticleRequest.builder()
                 .title(TITLE)
                 .content(CONTENT)
-                .author(AUTHOR)
                 .build();
     }
 
-    public static ArticleCommentRequest createArticleCommentRequest() {
-        return ArticleCommentRequest.builder()
+    public static UpdateArticleRequest createUpdateArticleRequest() {
+        return UpdateArticleRequest.builder()
+                .title(TITLE)
                 .content(CONTENT)
-                .author(AUTHOR)
                 .build();
     }
 
-    public static MemberRequest createMemberRequest() {
-        return MemberRequest.builder()
+    public static SaveArticleCommentRequest createSaveArticleCommentRequest() {
+        return SaveArticleCommentRequest.builder()
+                .content(CONTENT)
+                .build();
+    }
+
+    public static UpdateArticleCommentRequest createUpdateArticleCommentRequest() {
+        return UpdateArticleCommentRequest.builder()
+                .content(CONTENT)
+                .build();
+    }
+
+    public static SaveMemberRequest createSaveMemberRequest() {
+        return SaveMemberRequest.builder()
                 .email(EMAIL)
                 .password(PASSWORD)
                 .nickname(NICKNAME)
+                .build();
+    }
+
+    public static UpdateMemberNicknameRequest createUpdateMemberNicknameRequest() {
+        return UpdateMemberNicknameRequest.builder()
+                .nickname(NICKNAME)
+                .build();
+    }
+
+    public static UpdateMemberPasswordRequest createUpdateMemberPasswordRequest() {
+        return UpdateMemberPasswordRequest.builder()
+                .password(PASSWORD)
                 .build();
     }
 

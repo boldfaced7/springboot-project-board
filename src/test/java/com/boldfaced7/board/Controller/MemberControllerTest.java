@@ -1,8 +1,8 @@
 package com.boldfaced7.board.Controller;
 
+import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.request.MemberRequest;
-import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.dto.request.SaveMemberRequest;
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.service.MemberService;
 import com.google.gson.Gson;
@@ -92,14 +92,14 @@ class MemberControllerTest {
     @Test
     void givenNewMemberInfo_whenRequestingSaving_thenSavesNewMember() throws Exception {
         // Given
-        MemberRequest memberRequest = createMemberRequest();
-        MemberDto memberDto = memberRequest.toDto();
+        SaveMemberRequest saveMemberRequest = createSaveMemberRequest();
+        MemberDto memberDto = saveMemberRequest.toDto();
         given(memberService.saveMember(memberDto)).willReturn(MEMBER_ID);
 
         // When & Then
         mvc.perform(post("/api/signUp")
                         .session(session)
-                        .content(gson.toJson(memberRequest))
+                        .content(gson.toJson(saveMemberRequest))
                         .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isCreated())
@@ -108,11 +108,51 @@ class MemberControllerTest {
         then(memberService).should().saveMember(memberDto);
     }
 
+    @Test
+    @DisplayName("[API][POST] 새 회원 등록 - 이메일 형식 불일치")
+    void givenInvalidEmailFormat_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        SaveMemberRequest saveMemberRequest = new SaveMemberRequest("notAnEmail", PASSWORD, NICKNAME);
+        // When & Then
+        mvc.perform(post("/api/signUp")
+                        .content(new Gson().toJson(saveMemberRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("[API][POST] 새 회원 등록 - 비밀번호 길이 초과")
+    void givenPasswordLengthExceeds_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        String longPassword = "a".repeat(Member.MAX_PASSWORD_LENGTH + 1); // MAX_PASSWORD_LENGTH + 1
+        SaveMemberRequest saveMemberRequest = new SaveMemberRequest(EMAIL, longPassword, NICKNAME);
+        // When & Then
+        mvc.perform(post("/api/signUp")
+                        .content(new Gson().toJson(saveMemberRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("[API][POST] 새 회원 등록 - 닉네임 누락")
+    void givenMissingNickname_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        SaveMemberRequest saveMemberRequest = new SaveMemberRequest(EMAIL, PASSWORD, "");
+        // When & Then
+        mvc.perform(post("/api/signUp")
+                        .content(new Gson().toJson(saveMemberRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
     @DisplayName("[API][PATCH] 회원 정보 수정 - 정상 호출")
     @Test
     void givenModifiedMemberInfo_whenRequestingUpdating_thenUpdatesMember() throws Exception {
         // Given
-        MemberRequest memberRequest = createMemberRequest();
+        SaveMemberRequest memberRequest = createSaveMemberRequest();
         willDoNothing().given(memberService).updateMember(any(MemberDto.class));
 
         // When & Then

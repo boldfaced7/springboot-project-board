@@ -7,10 +7,13 @@ import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.error.ErrorCode;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
+import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -96,8 +99,9 @@ class ArticleCommentServiceTest {
         // Then
         assertThat(wrongArticleId).isNotEqualTo(ARTICLE_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_MESSAGE + wrongArticleId);
+                .isInstanceOf(ArticleNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
+
         then(articleRepository).should().findById(wrongArticleId);
     }
 
@@ -126,19 +130,19 @@ class ArticleCommentServiceTest {
     void givenWrongMember_whenSearchingArticleComments_thenThrowsException() {
         //Given
         Long wrongMemberId = 2L;
-        MemberDto memberDto = new MemberDto(wrongMemberId);
+        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
 
-
-        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.empty());
+        MemberDto memberDto = new MemberDto(MEMBER_ID);
 
         // When
         Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(memberDto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_MEMBER_MESSAGE + wrongMemberId);
-        then(memberRepository).should().findById(wrongMemberId);
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
+
     }
 
     @DisplayName("[조회] id를 입력하면, 댓글을 반환")
@@ -155,6 +159,7 @@ class ArticleCommentServiceTest {
         // Then
         assertThat(dto)
                 .hasFieldOrPropertyWithValue("content", articleComment.getContent());
+
         then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
@@ -171,8 +176,8 @@ class ArticleCommentServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + wrongArticleCommentId);
+                .isInstanceOf(ArticleCommentNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
     }
@@ -235,8 +240,8 @@ class ArticleCommentServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+                .isInstanceOf(ArticleCommentNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
     }
@@ -258,9 +263,10 @@ class ArticleCommentServiceTest {
         Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
@@ -281,6 +287,7 @@ class ArticleCommentServiceTest {
         // Then
         assertThat(articleComment)
                 .hasFieldOrPropertyWithValue("isActive", false);
+
         then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
 
@@ -298,8 +305,8 @@ class ArticleCommentServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + wrongArticleCommentId);
+                .isInstanceOf(ArticleCommentNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
 
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
     }
@@ -321,9 +328,10 @@ class ArticleCommentServiceTest {
         Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }
@@ -360,8 +368,9 @@ class ArticleCommentServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+                .isInstanceOf(ArticleCommentNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
+
         then(articleCommentRepository).should().findById(wrongArticleCommentId);
     }
 
@@ -382,9 +391,10 @@ class ArticleCommentServiceTest {
         Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleCommentService.NO_ARTICLE_COMMENT_MESSAGE + dto.getArticleCommentId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
     }

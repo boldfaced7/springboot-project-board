@@ -1,11 +1,11 @@
 package com.boldfaced7.board.Controller;
 
+import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.AuthDto;
 import com.boldfaced7.board.dto.request.AuthRequest;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.service.AuthService;
-import com.boldfaced7.board.service.MemberService;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +15,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -69,6 +68,34 @@ class AuthControllerTest {
         assertThat(session.isInvalid()).isFalse();
 
         then(authService).should().login(authDto);
+    }
+
+    @Test
+    @DisplayName("[API][POST] 로그인 - 이메일 형식 불일치")
+    void givenInvalidEmailFormat_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+
+        AuthRequest authRequest = new AuthRequest("notAnEmail", PASSWORD);
+        // When & Then
+        mvc.perform(post(loginUrlTemplate)
+                        .content(new Gson().toJson(authRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("[API][POST] 로그인 - 비밀번호 길이 초과")
+    void givenPasswordLengthExceeds_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        String longPassword = "a".repeat(Member.MAX_PASSWORD_LENGTH + 1); // MAX_PASSWORD_LENGTH + 1
+        AuthRequest authRequest = new AuthRequest(EMAIL, longPassword);
+        // When & Then
+        mvc.perform(post(loginUrlTemplate)
+                        .content(new Gson().toJson(authRequest))
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest());
     }
 
     @DisplayName("[API][GET] 로그아웃 - 정상 호출")

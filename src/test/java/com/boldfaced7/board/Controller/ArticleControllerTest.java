@@ -1,11 +1,12 @@
 package com.boldfaced7.board.Controller;
 
+import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.dto.request.UpdateArticleRequest;
 import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.ArticleDto;
-import com.boldfaced7.board.dto.request.ArticleRequest;
+import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -114,14 +115,14 @@ class ArticleControllerTest {
     @Test
     void givenAuthorizedMemberAndNewArticleInfo_whenRequestingSaving_thenSavesNewArticle() throws Exception {
         // Given
-        ArticleRequest articleRequest = createArticleRequest();
-        ArticleDto articleDto = articleRequest.toDto();
+        SaveArticleRequest saveArticleRequest = createSaveArticleRequest();
+        ArticleDto articleDto = saveArticleRequest.toDto();
         given(articleService.saveArticle(articleDto)).willReturn(ARTICLE_ID);
 
         // When & Then
         mvc.perform(post(articleUrl())
                         .session(session)
-                        .content(gson.toJson(articleRequest))
+                        .content(gson.toJson(saveArticleRequest))
                         .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isCreated())
@@ -129,11 +130,69 @@ class ArticleControllerTest {
         then(articleService).should().saveArticle(articleDto);
     }
 
+    @DisplayName("[API][POST] 새 게시글 등록 - 제목 누락")
+    @Test
+    void givenNewArticleInfoWithoutTitle_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        SaveArticleRequest saveArticleRequest = new SaveArticleRequest("", CONTENT);
+
+        // When & Then
+        mvc.perform(post(articleUrl())
+                        .session(session)
+                        .content(gson.toJson(saveArticleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("[API][POST] 새 게시글 등록 - 내용 누락")
+    @Test
+    void givenNewArticleInfoWithoutContent_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        SaveArticleRequest saveArticleRequest = new SaveArticleRequest(TITLE, "");
+
+        // When & Then
+        mvc.perform(post(articleUrl())
+                        .session(session)
+                        .content(gson.toJson(saveArticleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("[API][POST] 새 게시글 등록 - 제목 길이 초과")
+    @Test
+    void givenNewArticleInfoWithLongTitle_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        String longTitle = "a".repeat(Article.MAX_TITLE_LENGTH + 1);
+        SaveArticleRequest saveArticleRequest = new SaveArticleRequest(longTitle, CONTENT);
+
+        // When & Then
+        mvc.perform(post(articleUrl())
+                        .session(session)
+                        .content(gson.toJson(saveArticleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("[API][POST] 새 게시글 등록 - 내용 길이 초과")
+    @Test
+    void givenNewArticleInfoWithLongContent_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        String longContent = "a".repeat(Article.MAX_CONTENT_LENGTH + 1);
+        SaveArticleRequest saveArticleRequest = new SaveArticleRequest(TITLE, longContent);
+
+        // When & Then
+        mvc.perform(post(articleUrl())
+                        .session(session)
+                        .content(gson.toJson(saveArticleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
     @DisplayName("[API][PATCH] 게시글 수정 - 정상 호출")
     @Test
     void givenAuthorizedMemberAndModifiedArticleInfo_whenRequestingUpdating_thenUpdatesArticle() throws Exception {
         // Given
-        ArticleRequest articleRequest = createArticleRequest();
+        UpdateArticleRequest articleRequest = createUpdateArticleRequest();
         ArticleDto articleDto = articleRequest.toDto(ARTICLE_ID);
         willDoNothing().given(articleService).updateArticle(articleDto);
 

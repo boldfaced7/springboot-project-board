@@ -2,6 +2,8 @@ package com.boldfaced7.board.service;
 
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.AuthDto;
+import com.boldfaced7.board.error.ErrorCode;
+import com.boldfaced7.board.error.exception.auth.InvalidAuthValueException;
 import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -61,8 +63,9 @@ class AuthServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(AuthService.NOT_FOUND);
+                .isInstanceOf(InvalidAuthValueException.class)
+                .hasMessage(ErrorCode.INVALID_AUTH_VALUE.getMessage());
+
         then(memberRepository).should().findByEmail(authDto.getEmail());
         then(encoder).should().encode(authDto.getPassword());
     }
@@ -80,8 +83,9 @@ class AuthServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(AuthService.NOT_FOUND);
+                .isInstanceOf(InvalidAuthValueException.class)
+                .hasMessage(ErrorCode.INVALID_AUTH_VALUE.getMessage());
+
         then(memberRepository).should().findByEmail(authDto.getEmail());
         then(encoder).should().encode(authDto.getPassword());
     }

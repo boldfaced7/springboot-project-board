@@ -1,11 +1,12 @@
 package com.boldfaced7.board.Controller;
 
+import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.request.ArticleCommentRequest;
-import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.dto.request.SaveArticleCommentRequest;
 import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.dto.request.UpdateArticleCommentRequest;
 import com.boldfaced7.board.service.ArticleCommentService;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
@@ -138,14 +139,14 @@ class ArticleCommentControllerTest {
     @Test
     void givenAuthorizedMemberAndNewArticleCommentInfo_whenRequestingSaving_thenSavesNewArticleComment() throws Exception {
         // Given
-        ArticleCommentRequest articleCommentRequest = createArticleCommentRequest();
-        ArticleCommentDto articleCommentDto = articleCommentRequest.toDto(ARTICLE_ID);
+        SaveArticleCommentRequest saveArticleCommentRequest = createSaveArticleCommentRequest();
+        ArticleCommentDto articleCommentDto = saveArticleCommentRequest.toDto(ARTICLE_ID);
         given(articleCommentService.saveArticleComment(articleCommentDto)).willReturn(ARTICLE_COMMENT_ID);
 
         // When & Then
         mvc.perform(post(articleArticleCommentUrl(ARTICLE_ID))
                         .session(session)
-                        .content(gson.toJson(articleCommentRequest))
+                        .content(gson.toJson(saveArticleCommentRequest))
                         .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isCreated())
@@ -154,12 +155,42 @@ class ArticleCommentControllerTest {
         then(articleCommentService).should().saveArticleComment(articleCommentDto);
     }
 
+
+    @DisplayName("[API][POST] 새 댓글 등록 - 내용 누락")
+    @Test
+    void givenNewArticleCommentInfoWithoutContent_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        SaveArticleCommentRequest articleRequest = new SaveArticleCommentRequest("");
+
+        // When & Then
+        mvc.perform(post(articleArticleCommentUrl(ARTICLE_ID))
+                        .session(session)
+                        .content(gson.toJson(articleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("[API][POST] 새 댓글 등록 - 내용 길이 초과")
+    @Test
+    void givenNewArticleCommentInfoWithLongContent_whenRequestingSaving_thenReturnsBadRequest() throws Exception {
+        // Given
+        String longContent = "a".repeat(ArticleComment.MAX_CONTENT_LENGTH + 1);
+        SaveArticleCommentRequest articleRequest = new SaveArticleCommentRequest(longContent);
+
+        // When & Then
+        mvc.perform(post(articleArticleCommentUrl(ARTICLE_ID))
+                        .session(session)
+                        .content(gson.toJson(articleRequest))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
     @DisplayName("[API][PATCH] 댓글 수정 - 정상 호출")
     @Test
     void givenArticleCommentIdAndModifiedArticleCommentInfo_whenRequestingUpdating_thenUpdatesArticleComment() throws Exception {
         // Given
-        ArticleCommentRequest articleCommentRequest = createArticleCommentRequest();
-        ArticleCommentDto articleCommentDto = articleCommentRequest.toDtoForUpdating(ARTICLE_COMMENT_ID);
+        UpdateArticleCommentRequest articleCommentRequest = createUpdateArticleCommentRequest();
+        ArticleCommentDto articleCommentDto = articleCommentRequest.toDto(ARTICLE_COMMENT_ID);
         willDoNothing().given(articleCommentService).updateArticleComment(articleCommentDto);
 
         // When & Then

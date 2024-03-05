@@ -10,14 +10,17 @@ import java.util.Objects;
 @Entity
 public class Article extends BaseEntity {
 
+    public static final int MAX_TITLE_LENGTH = 100;
+    public static final int MAX_CONTENT_LENGTH = 10000;
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "article_id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = MAX_TITLE_LENGTH)
     private String title;
 
-    @Column(nullable = false, length = 10000)
+    @Column(nullable = false, length = MAX_CONTENT_LENGTH)
     private String content;
 
     private boolean isActive = true;

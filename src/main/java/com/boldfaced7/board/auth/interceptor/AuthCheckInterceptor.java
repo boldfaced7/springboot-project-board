@@ -1,6 +1,7 @@
 package com.boldfaced7.board.auth.interceptor;
 
 import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.error.exception.auth.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -13,9 +14,9 @@ public class AuthCheckInterceptor implements HandlerInterceptor {
         HttpSession session = request.getSession(false);
 
         if (session == null || session.getAttribute(SessionConst.AUTH_RESPONSE) == null) {
-            response.setStatus(401);
-            return false;
+            throw new UnauthorizedException();
         }
+
         return true;
     }
 }

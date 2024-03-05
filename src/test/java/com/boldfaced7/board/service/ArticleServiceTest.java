@@ -6,10 +6,13 @@ import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.error.ErrorCode;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -100,8 +103,9 @@ class ArticleServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + ARTICLE_ID);
+                .isInstanceOf(ArticleNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
+
         then(articleRepository).should().findById(ARTICLE_ID);
     }
 
@@ -142,9 +146,11 @@ class ArticleServiceTest {
         Throwable t = catchThrowable(() -> articleService.getArticles(memberDto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_MEMBER_MESSAGE + wrongMemberId);
+                .isInstanceOf(MemberNotFoundException.class)
+                .hasMessage(ErrorCode.MEMBER_NOT_FOUND.getMessage());
+
         then(memberRepository).should().findById(wrongMemberId);
     }
 
@@ -203,8 +209,9 @@ class ArticleServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + wrongArticleId);
+                .isInstanceOf(ArticleNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
+
         then(articleRepository).should().findById(wrongArticleId);
     }
 
@@ -225,9 +232,10 @@ class ArticleServiceTest {
         Throwable t = catchThrowable(() -> articleService.updateArticle(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + dto.getArticleId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleRepository).should().findById(dto.getArticleId());
     }
@@ -265,8 +273,8 @@ class ArticleServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + wrongArticleId);
+                .isInstanceOf(ArticleNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
 
         then(articleRepository).should().findById(wrongArticleId);
     }
@@ -288,9 +296,10 @@ class ArticleServiceTest {
         Throwable t = catchThrowable(() -> articleService.softDeleteArticle(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + dto.getArticleId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleRepository).should().findById(dto.getArticleId());
     }
@@ -327,8 +336,8 @@ class ArticleServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + wrongArticleId);
+                .isInstanceOf(ArticleNotFoundException.class)
+                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
         then(articleRepository).should().findById(dto.getArticleId());
     }
 
@@ -349,9 +358,10 @@ class ArticleServiceTest {
         Throwable t = catchThrowable(() -> articleService.hardDeleteArticle(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(ArticleService.NO_ARTICLE_MESSAGE + dto.getArticleId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
 
         then(articleRepository).should().findById(dto.getArticleId());
     }

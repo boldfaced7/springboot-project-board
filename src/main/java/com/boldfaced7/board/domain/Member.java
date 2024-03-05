@@ -10,18 +10,22 @@ import java.util.Objects;
 @Entity
 public class Member extends BaseTimeEntity {
 
+    public static final int MAX_EMAIL_LENGTH = 254;
+    public static final int MAX_PASSWORD_LENGTH = 64;
+    public static final int MAX_NICKNAME_LENGTH = 20;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = MAX_EMAIL_LENGTH)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = MAX_PASSWORD_LENGTH)
     private String password;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = MAX_NICKNAME_LENGTH)
     private String nickname;
 
     private boolean isActive = true;

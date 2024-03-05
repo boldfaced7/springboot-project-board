@@ -4,6 +4,8 @@ import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +22,6 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final BCryptPasswordEncoder encoder;
-
-    public static final String NO_MEMBER = "탈퇴했거나 존재하지 않는 회원입니다 - memberId: ";
 
     @Transactional(readOnly = true)
     public boolean isOccupiedEmail(String email) {
@@ -79,7 +79,7 @@ public class MemberService {
 
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_MEMBER + memberId));
+                .orElseThrow(MemberNotFoundException::new);
     }
 
     private Member findMemberByDto(MemberDto dto) {
@@ -94,7 +94,7 @@ public class MemberService {
     private void authorizeMember(Long memberId) {
         AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
         if (authInfo == null || !authInfo.getMemberId().equals(memberId)) {
-            throw new EntityNotFoundException(NO_MEMBER + memberId);
+            throw new ForbiddenException();
         }
     }
 }

@@ -10,11 +10,13 @@ import java.util.Objects;
 @Entity
 public class ArticleComment extends BaseEntity {
 
+    public static final int MAX_CONTENT_LENGTH = 1000;
+
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "article_comment_id")
     private Long id;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = MAX_CONTENT_LENGTH)
     private String content;
 
     private boolean isActive = true;

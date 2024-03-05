@@ -1,7 +1,8 @@
 package com.boldfaced7.board.dto.request;
 
+import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.dto.response.AuthResponse;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,25 +12,16 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberRequest {
-    private String email;
-    private String password;
-    private String nickname;
+public class UpdateMemberPasswordRequest {
 
-    public MemberDto toDto() {
-        return MemberDto.builder()
-                .email(email)
-                .password(password)
-                .nickname(nickname)
-                .build();
-    }
+    @NotBlank
+    @Size(max = Member.MAX_PASSWORD_LENGTH)
+    private String password;
 
     public MemberDto toDto(Long targetId) {
         return MemberDto.builder()
                 .memberId(targetId)
-                .email(email)
                 .password(password)
-                .nickname(nickname)
                 .build();
     }
 }

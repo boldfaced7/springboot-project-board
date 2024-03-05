@@ -3,6 +3,9 @@ package com.boldfaced7.board.service;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.error.ErrorCode;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -146,8 +149,9 @@ class MemberServiceTest {
 
         // Then
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(MemberService.NO_MEMBER + wrongMemberId);
+                .isInstanceOf(MemberNotFoundException.class)
+                .hasMessage(ErrorCode.MEMBER_NOT_FOUND.getMessage());
+
         then(memberRepository).should().findById(wrongMemberId);
     }
 
@@ -205,9 +209,10 @@ class MemberServiceTest {
         Throwable t = catchThrowable(() -> memberService.updateMember(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
     }
 
     @DisplayName("[삭제] id를 입력하면, 회원을 삭제(soft delete)")
@@ -241,9 +246,10 @@ class MemberServiceTest {
         Throwable t = catchThrowable(() -> memberService.softDeleteMember(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
     }
 
     @DisplayName("[삭제] id를 입력하면, 회원을 삭제(hard delete)")
@@ -277,9 +283,10 @@ class MemberServiceTest {
         Throwable t = catchThrowable(() -> memberService.hardDeleteMember(dto));
 
         // Then
+        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
         assertThat(t)
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(MemberService.NO_MEMBER + dto.getMemberId());
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
     }
     /*
     @DisplayName("[] ")

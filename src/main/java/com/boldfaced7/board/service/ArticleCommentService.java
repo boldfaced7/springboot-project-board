@@ -8,6 +8,10 @@ import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
+import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
+import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
@@ -27,11 +31,6 @@ public class ArticleCommentService {
     private final ArticleCommentRepository articleCommentRepository;
     private final MemberRepository memberRepository;
 
-    public static final String NO_ARTICLE_MESSAGE = "게시글이 없습니다 - articleId: ";
-    public static final String NO_ARTICLE_COMMENT_MESSAGE = "댓글이 없습니다 - articleCommentId: ";
-    public static final String NO_MEMBER_MESSAGE = "회원을 찾을 수 없습니다 - memberId: ";
-
-
     @Transactional(readOnly = true)
     public List<ArticleCommentDto> getArticleComments() {
         return articleCommentRepository.findAll().stream()
@@ -50,6 +49,7 @@ public class ArticleCommentService {
 
     @Transactional(readOnly = true)
     public List<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
+        authorizeMember(memberDto.getMemberId());
         Member member = findMemberById(memberDto.getMemberId());
 
         return articleCommentRepository.findAllByMember(member).stream()
@@ -92,7 +92,7 @@ public class ArticleCommentService {
 
     private ArticleComment findArticleCommentById(Long articleCommentId) {
         return articleCommentRepository.findById(articleCommentId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_COMMENT_MESSAGE + articleCommentId));
+                .orElseThrow(ArticleCommentNotFoundException::new);
     }
 
     private ArticleComment findArticleCommentByDto(ArticleCommentDto articleCommentDto) {
@@ -101,18 +101,25 @@ public class ArticleCommentService {
 
     private Article findArticleById(Long articleId) {
         return articleRepository.findById(articleId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_ARTICLE_MESSAGE + articleId));
+                .orElseThrow(ArticleNotFoundException::new);
     }
 
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException(NO_MEMBER_MESSAGE + memberId));
+                .orElseThrow(MemberNotFoundException::new);
     }
 
     private void authorizeAuthor(ArticleComment articleComment) {
         AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
         if (authInfo == null || !authInfo.getMemberId().equals(articleComment.getMember().getId())) {
-            throw new EntityNotFoundException(NO_ARTICLE_COMMENT_MESSAGE + articleComment.getId());
+            throw new ForbiddenException();
+        }
+    }
+
+    private void authorizeMember(Long memberId) {
+        AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
+        if (authInfo == null || !authInfo.getMemberId().equals(memberId)) {
+            throw new ForbiddenException();
         }
     }
 }

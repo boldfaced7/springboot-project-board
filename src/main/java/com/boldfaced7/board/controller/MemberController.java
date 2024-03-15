@@ -1,8 +1,9 @@
-package com.boldfaced7.board.Controller;
+package com.boldfaced7.board.controller;
 
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveMemberRequest;
 import com.boldfaced7.board.dto.request.UpdateMemberNicknameRequest;
+import com.boldfaced7.board.dto.request.UpdateMemberPasswordRequest;
 import com.boldfaced7.board.dto.response.MemberListResponse;
 import com.boldfaced7.board.dto.response.MemberResponse;
 import com.boldfaced7.board.service.MemberService;
@@ -50,10 +51,21 @@ public class MemberController {
         return ResponseEntity.created(URI.create(createUrl(memberId))).build();
     }
 
-    @PatchMapping("/members/{memberId}")
-    private ResponseEntity<Void> updateMemberInfo(
+    @PatchMapping("/members/{memberId}/nicknames")
+    private ResponseEntity<Void> updateMemberNickname(
             @PathVariable Long memberId,
             @RequestBody @Validated UpdateMemberNicknameRequest memberRequest) {
+
+        MemberDto dto = memberRequest.toDto(memberId);
+        memberService.updateMember(dto);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/members/{memberId}/passwords")
+    private ResponseEntity<Void> updateMemberPassword(
+            @PathVariable Long memberId,
+            @RequestBody @Validated UpdateMemberPasswordRequest memberRequest) {
 
         MemberDto dto = memberRequest.toDto(memberId);
         memberService.updateMember(dto);

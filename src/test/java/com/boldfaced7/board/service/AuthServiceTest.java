@@ -1,25 +1,30 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.Assertion;
+import com.boldfaced7.board.Context;
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.AuthDto;
-import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.exception.auth.InvalidAuthValueException;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static com.boldfaced7.board.RepoMethod.*;
 import static com.boldfaced7.board.TestUtil.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 @DisplayName("AuthService 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -27,81 +32,53 @@ class AuthServiceTest {
     @InjectMocks AuthService authService;
     @Mock MemberRepository memberRepository;
     @Mock BCryptPasswordEncoder encoder;
+    ServiceTestTemplate testTemplate;
 
-    @DisplayName("[조회] ID/PW를 입력하면, 로그인 처리")
-    @Test
-    void givenEmailAndPassword_whenLogin_thenReturnsMember() {
-        //Given
-        Member member = createMember();
-        AuthDto authDto = createRequestAuthDto();
-        given(memberRepository.findByEmail(authDto.getEmail())).willReturn(Optional.of(member));
-        given(encoder.encode(authDto.getPassword())).willReturn(PASSWORD);
+    final static String WRONG_EMAIL = "wrongEmail";
+    final static String WRONG_PASSWORD = "wrongPassword";
+    final static String INACTIVE = "inactive";
 
-        // When
-        AuthDto returnedAuthDto = authService.login(authDto);
+    @BeforeEach
+    void setUp() {
+        AuthInfoHolder.setAuthInfo(createAuthResponse());
+        DependencyHolder dependencyHolder = DependencyHolder.builder().encoder(encoder)
+                .memberRepository(memberRepository).build();
 
-        // Then
-        assertThat(returnedAuthDto)
-                .hasFieldOrPropertyWithValue("memberId", authDto.getMemberId())
-                .hasFieldOrPropertyWithValue("email", authDto.getEmail())
-                .hasFieldOrPropertyWithValue("nickname", authDto.getNickname());
-
-        then(memberRepository).should().findByEmail(authDto.getEmail());
-        then(encoder).should().encode(authDto.getPassword());
+        testTemplate = new ServiceTestTemplate(dependencyHolder);
     }
-
-    @DisplayName("[조회] 잘못된 ID/PW를 입력하면, 로그인 처리 없이 예외를 던짐")
-    @Test
-    void givenWrongEmailAndPassword_whenLogin_thenThrowsException() {
-        //Given
-        AuthDto authDto = createRequestAuthDto();
-        given(memberRepository.findByEmail(authDto.getEmail())).willReturn(Optional.empty());
-        given(encoder.encode(authDto.getPassword())).willReturn(PASSWORD);
-
-        // When
-        Throwable t = catchThrowable(() -> authService.login(authDto));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(InvalidAuthValueException.class)
-                .hasMessage(ErrorCode.INVALID_AUTH_VALUE.getMessage());
-
-        then(memberRepository).should().findByEmail(authDto.getEmail());
-        then(encoder).should().encode(authDto.getPassword());
+    @DisplayName("[조회] 로그인")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createLoginRequestTests")
+    void LoginTest(String ignoredMessage, List<Context<DependencyHolder>> contexts,AuthDto request, List<Assertion<AuthDto>> assertions) {
+        testTemplate.performRequest(contexts, authService::login, request, assertions);
     }
+    static Stream<Arguments> createLoginRequestTests() {
+        AuthDto requestDto = createRequestAuthDto();
 
-    @DisplayName("[조회] 탈퇴한 ID/PW를 입력하면, 로그인 처리 없이 예외를 던짐")
-    @Test
-    void givenInactiveEmailAndPassword_whenLogin_thenThrowsException() {
-        //Given
-        AuthDto authDto = createRequestAuthDto();
-        given(memberRepository.findByEmail(authDto.getEmail())).willReturn(Optional.empty());
-        given(encoder.encode(authDto.getPassword())).willReturn(PASSWORD);
+        Member pwFailMember =createMember();
+        pwFailMember.updatePassword("New");
+        Member inactiveMember = createMember();
+        inactiveMember.deactivate();
 
-        // When
-        Throwable t = catchThrowable(() -> authService.login(authDto));
+        Context<DependencyHolder> encoder = new Context<>(encode, PASSWORD, PASSWORD, encoderFunc);
 
-        // Then
-        assertThat(t)
-                .isInstanceOf(InvalidAuthValueException.class)
-                .hasMessage(ErrorCode.INVALID_AUTH_VALUE.getMessage());
-
-        then(memberRepository).should().findByEmail(authDto.getEmail());
-        then(encoder).should().encode(authDto.getPassword());
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(createMember()), memberRepoFunc), encoder),
+                WRONG_EMAIL, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.empty(), memberRepoFunc), encoder),
+                WRONG_PASSWORD, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(pwFailMember), memberRepoFunc), encoder),
+                INACTIVE, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(inactiveMember), memberRepoFunc), encoder)
+        );
+        Map<String, List<Assertion<AuthDto>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>()),
+                WRONG_EMAIL, List.of(new Assertion<>(InvalidAuthValueException.class)),
+                WRONG_PASSWORD, List.of(new Assertion<>(InvalidAuthValueException.class)),
+                INACTIVE, List.of(new Assertion<>(InvalidAuthValueException.class))
+        );
+        return Stream.of(
+                Arguments.of("ID/PW를 입력하면, 로그인 처리", contexts.get(VALID), requestDto, assertions.get(VALID)),
+                Arguments.of("잘못된 ID를 입력하면, 로그인 처리 없이 예외를 던짐", contexts.get(WRONG_EMAIL), requestDto, assertions.get(WRONG_EMAIL)),
+                Arguments.of("잘못된 PW를 입력하면, 로그인 처리 없이 예외를 던짐", contexts.get(WRONG_PASSWORD), requestDto, assertions.get(WRONG_PASSWORD)),
+                Arguments.of("탈퇴한 ID/PW를 입력하면, 로그인 처리 없이 예외를 던짐", contexts.get(INACTIVE), requestDto, assertions.get(INACTIVE))
+        );
     }
-
-    /*
-    @DisplayName("[] ")
-    @Test
-    void given_when_then() {
-        //Given
-
-
-        // When
-        loginService.
-
-        // Then
-
-    }
-    */
 }

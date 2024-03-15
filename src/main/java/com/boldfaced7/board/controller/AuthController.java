@@ -1,4 +1,4 @@
-package com.boldfaced7.board.Controller;
+package com.boldfaced7.board.controller;
 
 import com.boldfaced7.board.dto.AuthDto;
 import com.boldfaced7.board.dto.request.AuthRequest;

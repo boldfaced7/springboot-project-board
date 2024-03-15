@@ -9,26 +9,43 @@ import com.boldfaced7.board.dto.AuthDto;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 public class TestUtil {
 
-    public final static Long ARTICLE_ID = 1L;
-    public final static Long ARTICLE_COMMENT_ID = 1L;
-    public final static Long MEMBER_ID = 1L;
-    public final static String EMAIL = "boldfaced7@email.com";
-    public final static String PASSWORD = "password";
-    public final static String NICKNAME = "nickname";
-    public final static String TITLE = "title";
-    public final static String CONTENT = "content";
-    public final static String AUTHOR = "author";
-    public final static String API = "/api";
-    public final static String ARTICLES = "articles";
-    public final static String ARTICLE_COMMENTS = "articleComments";
-    public final static String MEMBERS = "members";
+    public static final Long ARTICLE_ID = 1L;
+    public static final Long ARTICLE_COMMENT_ID = 1L;
+    public static final Long MEMBER_ID = 1L;
+    public static final String EMAIL = "boldfaced7@email.com";
+    public static final String PASSWORD = "password";
+    public static final String NICKNAME = "nickname";
+    public static final String TITLE = "title";
+    public static final String CONTENT = "content";
+    public static final String AUTHOR = "author";
+    public static final String API = "/api";
+    public static final String ARTICLES = "articles";
+    public static final String ARTICLE_COMMENTS = "articleComments";
+    public static final String MEMBERS = "members";
+    public static final String PASSWORDS = "passwords";
+    public static final String NICKNAMES = "nicknames";
+    public static final String SIGNUP = "signUp";
+    public static final String LOGIN = "login";
+    public static final String LOGOUT = "logout";
+    public static final String VALID = "valid";
+    public static final String NOT_FOUND = "notFound";
+    public static final String ARTICLE_NOT_FOUND = "articleNotFound";
+    public static final String ARTICLE_COMMENT_NOT_FOUND = "articleCommentNotFound";
+    public static final String MEMBER_NOT_FOUND = "MemberNotFound";
+    public static final String FORBIDDEN = "forbidden";
+
 
     /*
     엔티티
@@ -72,6 +89,15 @@ public class TestUtil {
     /*
     DTO
      */
+    public static MemberDto createMemberDto() {
+        return MemberDto.builder()
+                .memberId(MEMBER_ID)
+                .email(EMAIL)
+                .nickname(NICKNAME)
+                .createdAt(LocalDateTime.now())
+                .modifiedAt(LocalDateTime.now())
+                .build();
+    }
 
     public static MemberDto createRequestMemberDto() {
         return MemberDto.builder()
@@ -218,8 +244,63 @@ public class TestUtil {
     }
 
     /*
+    ResultMatcher
+     */
+    public static List<ResultMatcher> ok() {
+        return List.of(status().isOk());
+    }
+    public static List<ResultMatcher> created() {
+        return List.of(status().isCreated());
+    }
+    public static List<ResultMatcher> badRequest() {
+        return List.of(status().isBadRequest());
+    }
+    public static List<ResultMatcher> forbidden() {
+        return List.of(status().isForbidden());
+    }
+    public static List<ResultMatcher> notFound() {
+        return List.of(status().isNotFound());
+    }
+    public static List<ResultMatcher> contentTypeJson() {
+        return List.of(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    public static List<ResultMatcher> contentType(MediaType mediaType) {
+        return List.of(content().contentType(mediaType));
+    }
+
+    public static List<ResultMatcher> exists(List<String> validationTargets, String path) {
+        List<ResultMatcher> results = new ArrayList<>();
+
+        for (String target : validationTargets) {
+            results.add(jsonPath("$" + path + "." + target).exists());
+        }
+        return results;
+    }
+
+    public static List<ResultMatcher> doesNotExists(List<String> validationTargets, String path) {
+        List<ResultMatcher> results = new ArrayList<>();
+
+        for (String target : validationTargets) {
+            results.add(jsonPath("$" + path + "." + target).doesNotExist());
+        }
+        return results;
+    }
+
+    /*
     Url
      */
+    public static String signUpUrl() {
+        return combine(API, SIGNUP);
+    }
+
+    public static String loginUrl() {
+        return combine(API, LOGIN);
+    }
+
+    public static String logoutUrl() {
+        return combine(API, LOGOUT);
+    }
 
     public static String articleUrl() {
         return combine(API, ARTICLES);
@@ -251,6 +332,13 @@ public class TestUtil {
 
     public static String memberUrl(Long memberId) {
         return combine(memberUrl(), memberId);
+    }
+
+    public static String memberNicknameUrl(Long memberId) {
+        return combine(memberUrl(memberId), NICKNAMES);
+    }
+    public static String memberPasswordUrl(Long memberId) {
+        return combine(memberUrl(memberId), PASSWORDS);
     }
 
     public static String memberArticleUrl(Long memberId) {

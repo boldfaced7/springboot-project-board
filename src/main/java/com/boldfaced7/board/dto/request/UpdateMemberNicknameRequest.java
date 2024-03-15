@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class UpdateMemberNicknameRequest {
 
     @NotBlank
-    @Size(max = Member.MAX_PASSWORD_LENGTH)
+    @Size(max = Member.MAX_NICKNAME_LENGTH)
     private String nickname;
 
     public MemberDto toDto(Long targetId) {

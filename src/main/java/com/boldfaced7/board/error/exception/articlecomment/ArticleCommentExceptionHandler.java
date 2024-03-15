@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ArticleCommentExceptionHandler {
 
     @ExceptionHandler(ArticleCommentNotFoundException.class)
-    protected ResponseEntity<ErrorResponse> handle(ArticleCommentExceptionHandler e) {
+    protected ResponseEntity<ErrorResponse> handle(ArticleCommentNotFoundException e) {
         return GlobalExceptionHandler.createErrorResponseEntity(ErrorCode.ARTICLE_COMMENT_NOT_FOUND);
     }
 }

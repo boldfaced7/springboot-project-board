@@ -1,5 +1,7 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.Assertion;
+import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
@@ -7,41 +9,50 @@ import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.error.ErrorCode;
-import com.boldfaced7.board.error.exception.auth.ForbiddenException;
-import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
+import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
+import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static com.boldfaced7.board.RepoMethod.*;
 
 @DisplayName("ArticleCommentService 테스트")
 @ExtendWith(MockitoExtension.class)
 class ArticleCommentServiceTest {
 
     @InjectMocks private ArticleCommentService articleCommentService;
-    @Mock private ArticleCommentRepository articleCommentRepository;
     @Mock private ArticleRepository articleRepository;
+    @Mock private ArticleCommentRepository articleCommentRepository;
     @Mock private MemberRepository memberRepository;
+    ServiceTestTemplate testTemplate;
 
     @BeforeEach
     void setUp() {
         AuthInfoHolder.setAuthInfo(createAuthResponse());
+        DependencyHolder dependencyHolder = DependencyHolder.builder().articleRepository(articleRepository)
+                .articleCommentRepository(articleCommentRepository).memberRepository(memberRepository).build();
+
+        testTemplate = new ServiceTestTemplate(dependencyHolder);
     }
 
     @AfterEach
@@ -49,367 +60,223 @@ class ArticleCommentServiceTest {
         AuthInfoHolder.releaseAuthInfo();
     }
 
-    @DisplayName("[조회] 댓글 목록을 반환")
-    @Test
-    void givenNothing_whenSearchingArticleComments_thenReturnsArticleComments() {
-        //Given
+    @DisplayName("댓글 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetArticleCommentRequestTests")
+    void getArticleCommentTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Long request, List<Assertion<ArticleCommentDto>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::getArticleComment, request, assertions);
+    }
+    static Stream<Arguments> createGetArticleCommentRequestTests() {
         ArticleComment articleComment = createArticleComment();
-        given(articleCommentRepository.findAll()).willReturn(List.of(articleComment));
-
-        // When
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments();
-
-        // Then
-        assertThat(articleComments).isNotEmpty();
-        then(articleCommentRepository).should().findAll();
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(articleComment), articleCommentRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.empty(), articleCommentRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleCommentDto>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(new ArticleCommentDto(articleComment))),
+                NOT_FOUND, List.of(new Assertion<>(ArticleCommentNotFoundException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 댓글을 반환", contexts.get(VALID), ARTICLE_COMMENT_ID, assertions.get(VALID)),
+                Arguments.of("잘못된 id를 입력하면, 조회 없이 예외를 던짐", contexts.get(NOT_FOUND), ARTICLE_COMMENT_ID, assertions.get(NOT_FOUND))
+        );
     }
 
-    @DisplayName("[조회] 게시글 id를 입력하면, 해당 게시글의 댓글 목록을 반환")
-    @Test
-    void givenArticleId_whenSearchingArticleComments_thenReturnsArticleComments() {
-        //Given
+    @DisplayName("댓글 목록 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetArticleCommentsRequestTests")
+    void getArticleCommentsTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, List<Assertion<List<ArticleCommentDto>>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::getArticleComments, assertions);
+    }
+    static Stream<Arguments> createGetArticleCommentsRequestTests() {
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findArticleComments, List.of(createArticleComment()), articleCommentRepoFunc))
+        );
+        Map<String, List<Assertion<List<ArticleCommentDto>>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>())
+        );
+        return Stream.of(Arguments.of("댓글 목록을 반환", contexts.get(VALID), assertions.get(VALID)));
+    }
+
+    @DisplayName("게시글의 댓글 목록 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetArticleCommentsOfArticleRequestTests")
+    void getArticleCommentsOfArticleTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleDto request, List<Assertion<List<ArticleCommentDto>>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
+    }
+    static Stream<Arguments> createGetArticleCommentsOfArticleRequestTests() {
+        Article article = createArticle();
+        ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).build();
+
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(findArticleById, requestDto.getArticleId(), Optional.of(article), articleRepoFunc),
+                        new Context<>(findArticleCommentsByArticle, article, List.of(createArticleComment()), articleCommentRepoFunc)
+                ),
+                NOT_FOUND, List.of(new Context<>(findArticleById, requestDto.getArticleId(), Optional.empty(), articleRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleCommentDto>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>()),
+                NOT_FOUND, List.of(new Assertion<>(ArticleNotFoundException.class))
+        );
+        return Stream.of(
+                Arguments.of("회원 id를 입력하면, 댓글과 관련 댓글 리스트를 반환", contexts.get(VALID), requestDto, assertions.get(VALID)),
+                Arguments.of("잘못된 회원 id를 입력하면, 조회 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND))
+        );
+    }
+
+    @DisplayName("회원 작성 댓글 목록 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetArticleCommentsOfMemberRequestTests")
+    void getArticleCommentsOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<List<ArticleCommentDto>>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
+    }
+    static Stream<Arguments> createGetArticleCommentsOfMemberRequestTests() {
+        Member member = createMember();
+        MemberDto requestMemberDto = new MemberDto(MEMBER_ID);
+
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(findMemberById, requestMemberDto.getMemberId(), Optional.of(member), memberRepoFunc),
+                        new Context<>(findArticleCommentsByMember, member, List.of(createArticleComment()), articleCommentRepoFunc)
+                ),
+                NOT_FOUND, List.of(new Context<>(findMemberById, requestMemberDto.getMemberId(), Optional.empty(), memberRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleCommentDto>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>()),
+                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class))
+        );
+        return Stream.of(
+                Arguments.of("회원 id를 입력하면, 댓글과 관련 댓글 리스트를 반환", contexts.get(VALID), requestMemberDto, assertions.get(VALID)),
+                Arguments.of("잘못된 회원 id를 입력하면, 조회 없이 예외를 던짐", contexts.get(NOT_FOUND), requestMemberDto, assertions.get(NOT_FOUND))
+        );
+    }
+
+    @DisplayName("댓글 저장")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createPostArticleCommentRequestTests")
+    void PostArticleCommentTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleCommentDto request, List<Assertion<Long>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::saveArticleComment, request, assertions);
+    }
+    static Stream<Arguments> createPostArticleCommentRequestTests() {
+        Article article = createArticle();
+        Member member = createMember();
+        ArticleCommentDto requestDto = createArticleCommentDto();
+
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(findMemberById, member.getId(), Optional.of(member), memberRepoFunc),
+                        new Context<>(findArticleById, article.getId(), Optional.of(article), articleRepoFunc),
+                        new Context<>(saveArticleComment, requestDto.toEntityForSaving(article, member), createArticleComment(), articleCommentRepoFunc)
+                ),
+                ARTICLE_NOT_FOUND, List.of(
+                        new Context<>(findMemberById, member.getId(), Optional.of(member), memberRepoFunc),
+                        new Context<>(findArticleById, article.getId(), Optional.empty(), articleRepoFunc)
+                ),
+                MEMBER_NOT_FOUND, List.of(new Context<>(findMemberById, requestDto.getMemberId(), Optional.empty(), memberRepoFunc))
+        );
+        Map<String, List<Assertion<Long>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(ARTICLE_COMMENT_ID)),
+                ARTICLE_NOT_FOUND, List.of(new Assertion<>(ArticleNotFoundException.class)),
+                MEMBER_NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class))
+        );
+        return Stream.of(
+                Arguments.of("댓글 작성 정보를 입력하면, 댓글을 저장", contexts.get(VALID), requestDto, assertions.get(VALID)),
+                Arguments.of("게시글이 존재하지 않는다면, 저장 없이 예외를 던짐", contexts.get(ARTICLE_NOT_FOUND), requestDto, assertions.get(ARTICLE_NOT_FOUND)),
+                Arguments.of("존재하지 않는 회원의 요청이면, 저장 없이 예외를 던짐", contexts.get(MEMBER_NOT_FOUND), requestDto, assertions.get(MEMBER_NOT_FOUND))
+        );
+    }
+
+    @DisplayName("댓글 수정")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("UpdateArticleCommentRequestTests")
+    void UpdateArticleCommentTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleCommentDto request, List<Assertion<ArticleComment>> assertions, ArticleComment target) {
+        testTemplate.performRequest(contexts, articleCommentService::updateArticleComment, request, assertions, target);
+    }
+    static Stream<Arguments> UpdateArticleCommentRequestTests() {
         ArticleComment articleComment = createArticleComment();
-        Article article = articleComment.getArticle();
-        ArticleDto articleDto = new ArticleDto(ARTICLE_ID);
+        ArticleComment forbiddenArticleComment = createArticleComment();
+        ReflectionTestUtils.setField(forbiddenArticleComment.getMember(), "id", MEMBER_ID+1);
 
-        given(articleRepository.findById(articleDto.getArticleId())).willReturn(Optional.of(article));
-        given(articleCommentRepository.findAllByArticle(article)).willReturn(List.of(articleComment));
+        ArticleCommentDto requestDto = ArticleCommentDto.builder().articleCommentId(ARTICLE_COMMENT_ID).content("New").build();
 
-        // When
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(articleDto);
-
-        // Then
-        assertThat(articleComments).isNotEmpty();
-        then(articleRepository).should().findById(ARTICLE_ID);
-        then(articleCommentRepository).should().findAllByArticle(article);
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(articleComment), articleCommentRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.empty(), articleCommentRepoFunc)),
+                FORBIDDEN, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(forbiddenArticleComment), articleCommentRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleComment>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(Map.of("content", requestDto.getContent()))),
+                NOT_FOUND, List.of(new Assertion<>(ArticleCommentNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id와 댓글 수정 정보를 입력하면, 댓글을 수정", contexts.get(VALID), requestDto, assertions.get(VALID), articleComment),
+                Arguments.of("잘못된 id를 입력하면, 수정 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
+                Arguments.of("잘못된 회원이 접근하면, 수정 없이 예외를 던짐", contexts.get(FORBIDDEN), requestDto, assertions.get(FORBIDDEN), null)
+        );
     }
 
-    @DisplayName("[조회] 잘못된 게시글 id를 입력하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongArticleId_whenSearchingArticleComments_thenThrowsException() {
-        //Given
-        Long wrongArticleId = 2L;
-        ArticleDto articleDto = new ArticleDto(wrongArticleId);
-
-        given(articleRepository.findById(articleDto.getArticleId())).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(articleDto));
-
-        // Then
-        assertThat(wrongArticleId).isNotEqualTo(ARTICLE_ID);
-        assertThat(t)
-                .isInstanceOf(ArticleNotFoundException.class)
-                .hasMessage(ErrorCode.ARTICLE_NOT_FOUND.getMessage());
-
-        then(articleRepository).should().findById(wrongArticleId);
+    @DisplayName("댓글 비활성화")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createInactiveArticleCommentRequestTests")
+    void deactivateArticleCommentTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleCommentDto request, List<Assertion<ArticleComment>> assertions, ArticleComment target) {
+        testTemplate.performRequest(contexts, articleCommentService::softDeleteArticleComment, request, assertions, target);
     }
-
-    @DisplayName("[조회] 회원이 접근하면, 해당 회원의 댓글 목록을 반환")
-    @Test
-    void givenMemberId_whenSearchingArticleComments_thenReturnsArticleComments() {
+    static Stream<Arguments> createInactiveArticleCommentRequestTests() {
         ArticleComment articleComment = createArticleComment();
-        Member member = articleComment.getMember();
-        MemberDto memberDto = new MemberDto(MEMBER_ID);
+        ArticleComment forbiddenArticleComment = createArticleComment();
+        ReflectionTestUtils.setField(forbiddenArticleComment.getMember(), "id", MEMBER_ID+1);
 
-        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
-        given(articleCommentRepository.findAllByMember(member)).willReturn(List.of(articleComment));
+        ArticleCommentDto requestDto = ArticleCommentDto.builder().articleCommentId(ARTICLE_COMMENT_ID).build();
 
-        // When
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(memberDto);
-
-        // Then
-        assertThat(articleComments).isNotEmpty();
-        then(memberRepository).should().findById(MEMBER_ID);
-        then(articleCommentRepository).should().findAllByMember(member);
-
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(articleComment), articleCommentRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.empty(), articleCommentRepoFunc)),
+                FORBIDDEN, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(forbiddenArticleComment), articleCommentRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleComment>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(Map.of("isActive", false))),
+                NOT_FOUND, List.of(new Assertion<>(ArticleCommentNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 댓글을 비활성화", contexts.get(VALID), requestDto, assertions.get(VALID), articleComment),
+                Arguments.of("잘못된 id를 입력하면, 비활성화 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
+                Arguments.of("잘못된 회원이 접근하면, 비활성화 없이 예외를 던짐", contexts.get(FORBIDDEN), requestDto, assertions.get(FORBIDDEN), null)
+        );
     }
 
-    @DisplayName("[조회] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongMember_whenSearchingArticleComments_thenThrowsException() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        MemberDto memberDto = new MemberDto(MEMBER_ID);
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.getArticleComments(memberDto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-
+    @DisplayName("댓글 삭제")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createDeleteArticleCommentRequestTests")
+    void deleteArticleCommentTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleCommentDto request, List<Assertion<ArticleComment>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::hardDeleteArticleComment, request, assertions, null);
     }
-
-    @DisplayName("[조회] id를 입력하면, 댓글을 반환")
-    @Test
-    void givenArticleCommentId_whenSearchingArticleComment_thenReturnsArticleComment() {
-        //Given
+    static Stream<Arguments> createDeleteArticleCommentRequestTests() {
         ArticleComment articleComment = createArticleComment();
+        ArticleComment forbiddenArticleComment = createArticleComment();
+        ReflectionTestUtils.setField(forbiddenArticleComment.getMember(), "id", MEMBER_ID+1);
 
-        given(articleCommentRepository.findById(articleComment.getId())).willReturn(Optional.of(articleComment));
+        ArticleCommentDto requestDto = ArticleCommentDto.builder().articleCommentId(ARTICLE_COMMENT_ID).build();
 
-        // When
-        ArticleCommentDto dto = articleCommentService.getArticleComment(ARTICLE_COMMENT_ID);
-
-        // Then
-        assertThat(dto)
-                .hasFieldOrPropertyWithValue("content", articleComment.getContent());
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(articleComment), articleCommentRepoFunc),
+                        new Context<>(deleteArticleComment, articleComment, articleCommentRepoFunc)
+                ),
+                NOT_FOUND, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.empty(), articleCommentRepoFunc)),
+                FORBIDDEN, List.of(new Context<>(findArticleCommentById, ARTICLE_COMMENT_ID, Optional.of(forbiddenArticleComment), articleCommentRepoFunc))
+        );
+        Map<String, List<Assertion<ArticleComment>>> assertions = Map.of(
+                VALID, List.of(),
+                NOT_FOUND, List.of(new Assertion<>(ArticleCommentNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 댓글을 삭제", contexts.get(VALID), requestDto, assertions.get(VALID)),
+                Arguments.of("잘못된 id를 입력하면, 삭제 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND)),
+                Arguments.of("잘못된 회원이 접근하면, 삭제 없이 예외를 던짐", contexts.get(FORBIDDEN), requestDto, assertions.get(FORBIDDEN))
+        );
     }
-
-    @DisplayName("[조회] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongArticleCommentId_whenSearchingArticleComment_thenThrowsException() {
-        //Given
-        Long wrongArticleCommentId = 2L;
-
-        given(articleCommentRepository.findById(wrongArticleCommentId)).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.getArticleComment(wrongArticleCommentId));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(ArticleCommentNotFoundException.class)
-                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
-
-        then(articleCommentRepository).should().findById(wrongArticleCommentId);
-    }
-
-    @DisplayName("[저장] 댓글 작성 정보를 입력하면, 댓글을 저장")
-    @Test
-    void givenArticleCommentInfo_whenSavingArticleComment_thenSavesArticleComment() {
-        //Given
-        ArticleCommentDto dto = createArticleCommentDto();
-        dto.setArticleId(ARTICLE_ID);
-        dto.setMemberId(MEMBER_ID);
-
-        given(memberRepository.findById(dto.getMemberId())).willReturn(Optional.of(createMember()));
-        given(articleRepository.findById(dto.getArticleId())).willReturn(Optional.of(createArticle()));
-        given(articleCommentRepository.save(dto.toEntityForUpdating()))
-                .willReturn(createArticleComment());
-
-        // When
-        Long returnedArticleCommentId = articleCommentService.saveArticleComment(dto);
-
-        // Then
-        assertThat(returnedArticleCommentId).isNotNull();
-        then(memberRepository).should().findById(MEMBER_ID);
-        then(articleRepository).should().findById(ARTICLE_ID);
-        then(articleCommentRepository).should().save(any(ArticleComment.class));
-    }
-
-    @DisplayName("[수정] id와 댓글 수정 정보를 입력하면, 댓글을 수정")
-    @Test
-    void givenArticleCommentIdAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenUpdatesArticleComment() {
-        //Given
-        ArticleComment articleComment = createArticleComment();
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-        dto.setContent("new content");
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
-
-        // When
-        articleCommentService.updateArticleComment(dto);
-
-        // Then
-        assertThat(articleComment)
-                .hasFieldOrPropertyWithValue("content", dto.getContent());
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-    }
-
-    @DisplayName("[수정] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongArticleCommentIdAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenThrowsException() {
-        //Given
-        Long wrongArticleCommentId = 2L;
-        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
-        dto.setContent("new content");
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(dto));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(ArticleCommentNotFoundException.class)
-                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
-
-        then(articleCommentRepository).should().findById(wrongArticleCommentId);
-    }
-
-    @DisplayName("[수정] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongMemberAndModifiedArticleCommentInfo_whenUpdatingArticleComment_thenThrowsException() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-        dto.setContent("new content");
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId()))
-                .willReturn(Optional.of(createArticleComment()));
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.updateArticleComment(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-    }
-
-
-    @DisplayName("[삭제] id를 입력하면, 댓글을 삭제(soft delete)")
-    @Test
-    void givenArticleCommentId_whenDeletingArticleComment_thenDeletesArticleCommentSoftVer() {
-        //Given
-        ArticleComment articleComment = createArticleComment();
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
-
-        // When
-        articleCommentService.softDeleteArticleComment(dto);
-
-        // Then
-        assertThat(articleComment)
-                .hasFieldOrPropertyWithValue("isActive", false);
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-    }
-
-    @DisplayName("[삭제] 잘못된 id를 입력하면, 반환 없이 예외를 던짐(soft delete)")
-    @Test
-    void givenArticleCommentId_whenDeletingArticleComment_thenThrowsExceptionSoftVer() {
-        //Given
-        Long wrongArticleCommentId = 2L;
-        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(dto));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(ArticleCommentNotFoundException.class)
-                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
-
-        then(articleCommentRepository).should().findById(wrongArticleCommentId);
-    }
-
-    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(soft delete)")
-    @Test
-    void givenWrongMemberAndModifiedArticleCommentInfo_whenDeletingArticleComment_thenThrowsExceptionSoftVer() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-        dto.setContent("new content");
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId()))
-                .willReturn(Optional.of(createArticleComment()));
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.softDeleteArticleComment(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-    }
-
-    @DisplayName("[삭제] id를 입력하면, 댓글을 삭제(hard delete)")
-    @Test
-    void givenArticleCommentId_whenDeletingArticleComment_thenDeletesArticleCommentHardVer() {
-        //Given
-        ArticleComment articleComment = createArticleComment();
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.of(articleComment));
-        willDoNothing().given(articleCommentRepository).delete(articleComment);
-
-        // When
-        articleCommentService.hardDeleteArticleComment(dto);
-
-        // Then
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-        then(articleCommentRepository).should().delete(articleComment);
-    }
-
-    @DisplayName("[삭제] 잘못된 id를 입력하면, 반환 없이 예외를 던짐(hard delete)")
-    @Test
-    void givenArticleCommentId_whenDeletingArticleComment_thenThrowsExceptionHardVer() {
-        //Given
-        Long wrongArticleCommentId = 2L;
-        ArticleCommentDto dto = createArticleCommentDto(wrongArticleCommentId);
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId())).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(dto));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(ArticleCommentNotFoundException.class)
-                .hasMessage(ErrorCode.ARTICLE_COMMENT_NOT_FOUND.getMessage());
-
-        then(articleCommentRepository).should().findById(wrongArticleCommentId);
-    }
-
-    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(hard delete)")
-    @Test
-    void givenWrongMemberAndModifiedArticleCommentInfo_whenDeletingArticleComment_thenThrowsExceptionHardVer() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        ArticleCommentDto dto = createArticleCommentDto(ARTICLE_COMMENT_ID);
-        dto.setContent("new content");
-
-        given(articleCommentRepository.findById(dto.getArticleCommentId()))
-                .willReturn(Optional.of(createArticleComment()));
-
-        // When
-        Throwable t = catchThrowable(() -> articleCommentService.hardDeleteArticleComment(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-
-        then(articleCommentRepository).should().findById(ARTICLE_COMMENT_ID);
-    }
-    /*
-    @DisplayName("")
-    @Test
-    void given_when_then() {
-        //Given
-
-
-        // When
-        articleCommentService.
-
-        // Then
-
-    }
-     */
 }

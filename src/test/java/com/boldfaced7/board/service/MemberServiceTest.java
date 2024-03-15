@@ -1,30 +1,32 @@
 package com.boldfaced7.board.service;
 
+import com.boldfaced7.board.Assertion;
+import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static com.boldfaced7.board.RepoMethod.*;
 
 @DisplayName("MemberService 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -33,10 +35,19 @@ class MemberServiceTest {
     @InjectMocks private MemberService memberService;
     @Mock private MemberRepository memberRepository;
     @Mock private BCryptPasswordEncoder encoder;
+    ServiceTestTemplate testTemplate;
+
+    static final String ACTIVE = "active";
+    static final String INACTIVE = "inactive";
+    static final String FOUND = "found";
 
     @BeforeEach
     void setUp() {
         AuthInfoHolder.setAuthInfo(createAuthResponse());
+        DependencyHolder dependencyHolder = DependencyHolder.builder().encoder(encoder)
+                .memberRepository(memberRepository).build();
+
+        testTemplate = new ServiceTestTemplate(dependencyHolder);
     }
 
     @AfterEach
@@ -44,262 +55,219 @@ class MemberServiceTest {
         AuthInfoHolder.releaseAuthInfo();
     }
 
-    @DisplayName("[조회] email 존재 여부를 확인")
-    @Test
-    void givenEmail_whenSearching_thenReturnsTrueOrFalse() {
-        //Given
-        String wrongEmail = "wrong" + EMAIL;
-        given(memberRepository.existsByEmail(EMAIL)).willReturn(true);
-        given(memberRepository.existsByEmail(wrongEmail)).willReturn(false);
-
-        // When
-        boolean isOccupied1 = memberService.isOccupiedEmail(EMAIL);
-        boolean isOccupied2 = memberService.isOccupiedEmail(wrongEmail);
-
-        // Then
-        assertThat(isOccupied1).isTrue();
-        assertThat(isOccupied2).isFalse();
-
-        then(memberRepository).should().existsByEmail(EMAIL);
-        then(memberRepository).should().existsByEmail(wrongEmail);
+    @DisplayName("email 중복 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetEmailAndNicknameExistenceRequestTests")
+    void getEmailExistenceTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, String request, List<Assertion<Boolean>> assertions) {
+        testTemplate.performRequest(contexts, memberService::isOccupiedEmail, request, assertions);
+    }
+    static Stream<Arguments> createGetEmailAndNicknameExistenceRequestTests() {
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                FOUND, List.of(new Context<>(existsMemberByEmail, EMAIL, true, memberRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(existsMemberByEmail, EMAIL, false, memberRepoFunc))
+        );
+        Map<String, List<Assertion<Boolean>>> assertions = Map.of(
+                FOUND, List.of(new Assertion<>(true)),
+                NOT_FOUND, List.of(new Assertion<>(false))
+        );
+        return Stream.of(
+                Arguments.of("email 중복 O", contexts.get(FOUND), EMAIL, assertions.get(FOUND)),
+                Arguments.of("email 중복 X", contexts.get(NOT_FOUND), EMAIL, assertions.get(NOT_FOUND))
+        );
     }
 
-    @DisplayName("[조회] nickname 존재 여부를 확인")
-    @Test
-    void givenNickname_whenSearching_thenReturnsTrueOrFalse() {
-        //Given
-        String wrongNickname = "wrong" + NICKNAME;
-        given(memberRepository.existsByNickname(NICKNAME)).willReturn(true);
-        given(memberRepository.existsByNickname(wrongNickname)).willReturn(false);
+    @DisplayName("nickname 중복 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetNicknameExistenceRequestTests")
+    void getNicknameExistenceTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, String request, List<Assertion<Boolean>> assertions) {
+        testTemplate.performRequest(contexts, memberService::isOccupiedNickname, request, assertions);
+    }
+    static Stream<Arguments> createGetNicknameExistenceRequestTests() {
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                FOUND, List.of(new Context<>(existsMemberByNickname, NICKNAME, true, memberRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(existsMemberByNickname, NICKNAME, false, memberRepoFunc))
+        );
+        Map<String, List<Assertion<Boolean>>> assertions = Map.of(
+                FOUND, List.of(new Assertion<>(true)),
+                NOT_FOUND, List.of(new Assertion<>(false))
+        );
+        return Stream.of(
+                Arguments.of("nickname 중복 O", contexts.get(FOUND), NICKNAME, assertions.get(FOUND)),
+                Arguments.of("nickname 중복 X", contexts.get(NOT_FOUND), NICKNAME, assertions.get(NOT_FOUND))
+        );    }
 
-        // When
-        boolean isOccupied1 = memberService.isOccupiedNickname(NICKNAME);
-        boolean isOccupied2 = memberService.isOccupiedNickname(wrongNickname);
+    @DisplayName("회원 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetMemberRequestTests")
+    void getMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Long request, List<Assertion<MemberDto>> assertions) {
+        testTemplate.performRequest(contexts, memberService::getMember, request, assertions);
+    }
+    static Stream<Arguments> createGetMemberRequestTests() {
+        Member member = createMember();
 
-        // Then
-        assertThat(isOccupied1).isTrue();
-        assertThat(isOccupied2).isFalse();
-
-        then(memberRepository).should().existsByNickname(NICKNAME);
-        then(memberRepository).should().existsByNickname(wrongNickname);
-
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc))
+        );
+        Map<String, List<Assertion<MemberDto>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(new MemberDto(member))),
+                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 회원 정보를 반환", contexts.get(VALID), MEMBER_ID, assertions.get(VALID)),
+                Arguments.of("잘못된 id를 입력하면, 반환 없이 예외를 던짐", contexts.get(NOT_FOUND), MEMBER_ID, assertions.get(NOT_FOUND))
+        );
     }
 
-    @DisplayName("[조회] 전체 회원 목록을 반환")
-    @Test
-    void givenNothing_whenSearching_thenReturnsMembers() {
-        //Given
-        given(memberRepository.findAll()).willReturn(List.of(createMember()));
-
-        // When
-        List<MemberDto> memberDtos = memberService.getMembers();
-
-        // Then
-        assertThat(memberDtos).isNotEmpty();
-        then(memberRepository).should().findAll();
+    @DisplayName("회원 목록 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetMembersRequestTests")
+    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, List<Assertion<List<MemberDto>>> assertions) {
+        testTemplate.performRequest(contexts, memberService::getMembers, assertions);
+    }
+    static Stream<Arguments> createGetMembersRequestTests() {
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findMembers, List.of(createMember()), memberRepoFunc))
+        );
+        Map<String, List<Assertion<List<MemberDto>>>> assertions = Map.of(VALID, List.of(new Assertion<>()));
+        return Stream.of(Arguments.of("회원 목록을 반환", contexts.get(VALID), assertions.get(VALID)));
     }
 
-    @DisplayName("[조회] 활성/비활성 회원 목록을 반환")
-    @Test
-    void givenTrueOrFalse_whenSearching_thenReturnsActiveOrInactiveMembers() {
-        //Given
+    @DisplayName("활성/비활성 회원 목록 조회")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createGetctiveOrInactiveMembersRequestTests")
+    void getActiveOrInactiveMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, boolean request, List<Assertion<List<MemberDto>>> assertions) {
+        testTemplate.performRequest(contexts, memberService::getMembers, request, assertions);
+    }
+    static Stream<Arguments> createGetctiveOrInactiveMembersRequestTests() {
         Member activeMember = createMember();
-        given(memberRepository.findAll(true)).willReturn(List.of(activeMember));
-
         Member inactiveMember = createMember();
-        ReflectionTestUtils.setField(inactiveMember, "id", 2L);
         inactiveMember.deactivate();
-        given(memberRepository.findAll(false)).willReturn(List.of(inactiveMember));
 
-        // When
-        List<MemberDto> activeMemberDtos = memberService.getMembers(true);
-        List<MemberDto> inactiveMemberDtos = memberService.getMembers(false);
-
-        // Then
-        assertThat(activeMemberDtos.get(0).getMemberId()).isEqualTo(activeMember.getId());
-        assertThat(inactiveMemberDtos.get(0).getMemberId()).isEqualTo(inactiveMember.getId());
-
-        then(memberRepository).should().findAll(true);
-        then(memberRepository).should().findAll(false);
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                ACTIVE, List.of(new Context<>(findMembersByIsActive, true, List.of(activeMember), memberRepoFunc)),
+                INACTIVE, List.of(new Context<>(findMembersByIsActive, false, List.of(inactiveMember), memberRepoFunc))
+        );
+        Map<String, List<Assertion<List<MemberDto>>>> assertions = Map.of(
+                ACTIVE, List.of(new Assertion<>()),
+                INACTIVE, List.of(new Assertion<>())
+        );
+        return Stream.of(
+                Arguments.of("활성 회원 목록을 반환", contexts.get(ACTIVE), true, assertions.get(ACTIVE)),
+                Arguments.of("비활성 회원 목록을 반환", contexts.get(INACTIVE), false, assertions.get(INACTIVE))
+        );
     }
 
-    @DisplayName("[조회] id를 입력하면, 회원을 반환")
-    @Test
-    void givenMemberId_whenSearching_thenReturnsMember() {
-        //Given
+    @DisplayName("회원 저장")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createPostMemberRequestTests")
+    void PostMemberTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Long>> assertions) {
+        testTemplate.performRequest(contexts, memberService::saveMember, request, assertions);
+    }
+    static Stream<Arguments> createPostMemberRequestTests() {
+        MemberDto requestDto = MemberDto.builder().email(EMAIL).password(PASSWORD).nickname(NICKNAME).build();
+
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(encode, PASSWORD, PASSWORD, encoderFunc),
+                        new Context<>(saveMember, requestDto.toEntity(), createMember(), memberRepoFunc)
+                )
+        );
+        Map<String, List<Assertion<Long>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(MEMBER_ID))
+        );
+        return Stream.of(
+                Arguments.of("회원 작성 정보를 입력하면, 회원을 저장", contexts.get(VALID), requestDto, assertions.get(VALID))
+        );
+    }
+
+    @DisplayName("회원 수정")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("UpdateMemberRequestTests")
+    void UpdateMemberTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions, Member target) {
+        testTemplate.performRequest(contexts, memberService::updateMember, request, assertions, target);
+    }
+    static Stream<Arguments> UpdateMemberRequestTests() {
         Member member = createMember();
-        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
 
-        // When
-        MemberDto memberDto = memberService.getMember(MEMBER_ID);
+        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).password("New").nickname("New").build();
+        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).password("New").nickname("New").build();
 
-        // Then
-        assertThat(memberDto.getMemberId()).isEqualTo(MEMBER_ID);
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(
+                        new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc),
+                        new Context<>(encode, "New", "New", encoderFunc)
+                ),
+                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
+                FORBIDDEN, List.of()
+        );
+        Map<String, List<Assertion<Member>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(Map.of("password", requestDto.getPassword(),"nickname", requestDto.getNickname()))),
+                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id와 회원 수정 정보를 입력하면, 회원을 수정", contexts.get(VALID), requestDto, assertions.get(VALID), member),
+                Arguments.of("잘못된 id를 입력하면, 수정 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
+                Arguments.of("잘못된 회원이 접근하면, 수정 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN), null)
+        );
     }
 
-    @DisplayName("[조회] 잘못된 id를 입력하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongMemberId_whenSearching_thenThrowsException() {
-        //Given
-        Long wrongMemberId = 1L;
-        given(memberRepository.findById(wrongMemberId)).willReturn(Optional.empty());
-
-        // When
-        Throwable t = catchThrowable(() -> memberService.getMember(wrongMemberId));
-
-        // Then
-        assertThat(t)
-                .isInstanceOf(MemberNotFoundException.class)
-                .hasMessage(ErrorCode.MEMBER_NOT_FOUND.getMessage());
-
-        then(memberRepository).should().findById(wrongMemberId);
+    @DisplayName("회원 비활성화")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createInactiveMemberRequestTests")
+    void deactivateMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions, Member target) {
+        testTemplate.performRequest(contexts, memberService::softDeleteMember, request, assertions, target);
     }
-
-    @DisplayName("[저장] 회원 정보를 입력하면, 회원을 저장")
-    @Test
-    void givenMemberInfo_whenSaving_thenSavesMember() {
-        //Given
+    static Stream<Arguments> createInactiveMemberRequestTests() {
         Member member = createMember();
-        MemberDto memberDto = createRequestMemberDto();
 
-        given(memberRepository.save(memberDto.toEntity())).willReturn(member);
-        given(encoder.encode(memberDto.getPassword())).willReturn(PASSWORD);
+        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).build();
+        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).build();
 
-        // When
-        Long returnedMemberId = memberService.saveMember(memberDto);
-
-        // Then
-        assertThat(returnedMemberId).isEqualTo(MEMBER_ID);
-        then(memberRepository).should().save(memberDto.toEntity());
-        then(encoder).should().encode(memberDto.getPassword());
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
+                FORBIDDEN, List.of()
+        );
+        Map<String, List<Assertion<Member>>> assertions = Map.of(
+                VALID, List.of(new Assertion<>(Map.of("isActive", false))),
+                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 회원을 비활성화", contexts.get(VALID), requestDto, assertions.get(VALID), member),
+                Arguments.of("잘못된 id를 입력하면, 비활성화 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
+                Arguments.of("잘못된 회원이 접근하면, 비활성화 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN), null)
+        );
     }
 
-    @DisplayName("[수정] id와 회원 수정 정보를 입력하면, 회원 정보를 수정")
-    @Test
-    void givenMemberIdAndModifiedMemberInfo_whenUpdatingMember_thenUpdatesMember() {
-        //Given
+    @DisplayName("회원 삭제")
+    @ParameterizedTest(name = "{index}: {0}")
+    @MethodSource("createDeleteMemberRequestTests")
+    void deleteMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions) {
+        testTemplate.performRequest(contexts, memberService::hardDeleteMember, request, assertions, null);
+    }
+    static Stream<Arguments> createDeleteMemberRequestTests() {
         Member member = createMember();
-        MemberDto memberDto = createRequestMemberDto(MEMBER_ID);
-        memberDto.setNickname("new nickname");
 
-        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
+        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).build();
+        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).build();
 
-        // When
-        memberService.updateMember(memberDto);
-
-        // Then
-        assertThat(member)
-                .hasFieldOrPropertyWithValue("nickname", memberDto.getNickname());
-
-        then(memberRepository).should().findById(MEMBER_ID);
-
+        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
+                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
+                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
+                FORBIDDEN, List.of()
+        );
+        Map<String, List<Assertion<Member>>> assertions = Map.of(
+                VALID, List.of(),
+                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
+                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
+        );
+        return Stream.of(
+                Arguments.of("id를 입력하면, 회원을 삭제", contexts.get(VALID), requestDto, assertions.get(VALID)),
+                Arguments.of("잘못된 id를 입력하면, 삭제 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND)),
+                Arguments.of("잘못된 회원이 접근하면, 삭제 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN))
+        );
     }
-
-    @DisplayName("[수정] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐")
-    @Test
-    void givenWrongMemberAndModifiedMemberInfo_whenUpdatingMember_thenThrowsException() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        MemberDto dto = createRequestMemberDto(MEMBER_ID);
-        dto.setNickname("new nickname");
-
-        // When
-        Throwable t = catchThrowable(() -> memberService.updateMember(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-    }
-
-    @DisplayName("[삭제] id를 입력하면, 회원을 삭제(soft delete)")
-    @Test
-    void givenMemberId_whenDeleting_thenDeletesMemberSoftVer() {
-        //Given
-        Member member = createMember();
-        MemberDto dto = createRequestMemberDto(MEMBER_ID);
-        given(memberRepository.findById(dto.getMemberId())).willReturn(Optional.of(member));
-
-        // When
-        memberService.softDeleteMember(dto);
-
-        // Then
-        assertThat(member)
-                .hasFieldOrPropertyWithValue("isActive", false);
-
-        then(memberRepository).should().findById(MEMBER_ID);
-    }
-
-    @DisplayName("[삭제] 잘못된 회원이 접근하면, 삭제 없이 예외를 던짐(soft delete)")
-    @Test
-    void givenWrongMemberAndModifiedMemberInfo_whenDeletingMember_thenThrowsExceptionSoftVer() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        MemberDto dto = createRequestMemberDto(MEMBER_ID);
-
-        // When
-        Throwable t = catchThrowable(() -> memberService.softDeleteMember(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-    }
-
-    @DisplayName("[삭제] id를 입력하면, 회원을 삭제(hard delete)")
-    @Test
-    void givenMemberId_whenDeleting_thenDeletesMemberHardVer() {
-        //Given
-        Member member = createMember();
-        MemberDto memberDto = createRequestMemberDto(MEMBER_ID);
-
-        given(memberRepository.findById(memberDto.getMemberId())).willReturn(Optional.of(member));
-        willDoNothing().given(memberRepository).delete(member);
-
-        // When
-        memberService.hardDeleteMember(memberDto);
-
-        // Then
-        then(memberRepository).should().findById(MEMBER_ID);
-        then(memberRepository).should().delete(member);
-    }
-
-    @DisplayName("[삭제] 잘못된 회원이 접근하면, 반환 없이 예외를 던짐(hard delete)")
-    @Test
-    void givenWrongMemberAndModifiedMemberInfo_whenDeletingMember_thenThrowsExceptionHardVer() {
-        //Given
-        Long wrongMemberId = 2L;
-        AuthInfoHolder.setAuthInfo(createAuthResponse(wrongMemberId));
-
-        MemberDto dto = createRequestMemberDto(MEMBER_ID);
-
-        // When
-        Throwable t = catchThrowable(() -> memberService.hardDeleteMember(dto));
-
-        // Then
-        assertThat(wrongMemberId).isNotEqualTo(MEMBER_ID);
-        assertThat(t)
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessage(ErrorCode.FORBIDDEN.getMessage());
-    }
-    /*
-    @DisplayName("[] ")
-    @Test
-    void given_when_then() {
-        //Given
-
-
-        // When
-        memberService.
-
-        // Then
-
-    }
- */
 }

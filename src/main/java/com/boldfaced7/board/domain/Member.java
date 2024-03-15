@@ -53,6 +53,7 @@ public class Member extends BaseTimeEntity {
 
     public void update(Member member) {
         if (member.getNickname() != null) updateNickname(member.getNickname());
+        if (member.getPassword() != null) updatePassword(member.getPassword());
     }
 
     public void deactivate() {

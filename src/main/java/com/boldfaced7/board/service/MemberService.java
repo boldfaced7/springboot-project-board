@@ -62,6 +62,8 @@ public class MemberService {
     public void updateMember(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
         Member member = findMemberByDto(memberDto);
+
+        encodePassword(memberDto);
         member.update(memberDto.toEntity());
     }
 

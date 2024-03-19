@@ -57,7 +57,7 @@ public class ArticleController {
     }
 
     @PostMapping("/articles")
-    private ResponseEntity<Void> postNewArticle(
+    public ResponseEntity<Void> postNewArticle(
             @RequestBody @Validated SaveArticleRequest saveArticleRequest) {
 
         ArticleDto dto = saveArticleRequest.toDto();

@@ -1,6 +1,7 @@
 package com.boldfaced7.board.dto.response;
 
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.AttachmentDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +22,7 @@ public class ArticleResponse {
     private String author;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
+    private List<String> attachmentUrls;
     private List<ArticleCommentResponse> articleComments;
 
 
@@ -32,7 +34,8 @@ public class ArticleResponse {
         author = dto.getAuthor();
         createdAt = dto.getCreatedAt();
         modifiedAt = dto.getModifiedAt();
-        articleComments = dto.getArticleComments()
-                .stream().map(ArticleCommentResponse::new).toList();
+        attachmentUrls = dto.getAttachmentUrls();
+        articleComments = dto.getArticleComments().stream()
+                .map(ArticleCommentResponse::new).toList();
     }
 }

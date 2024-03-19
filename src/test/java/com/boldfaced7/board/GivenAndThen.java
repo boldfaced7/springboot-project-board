@@ -1,6 +1,7 @@
 package com.boldfaced7.board;
 
 import lombok.*;
+import org.assertj.core.util.TriFunction;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -82,6 +83,18 @@ public class GivenAndThen {
         S covered = holder.apply(entity);
         given = () -> method.apply(willThrow(exception).given(covered), param);
         then = () -> method.apply(then(covered).should(), param);
+    }
+
+    public <P1, P2, R, S, T> GivenAndThen(T entity, TriFunction<S, P1, P2, R> method, P1 param1, P2 param2, R result, Function<T, S> holder) {
+        S covered = holder.apply(entity);
+        given = () -> given(method.apply(covered, param1, param2)).willReturn(result);
+        then = () -> method.apply(then(covered).should(), param1, param2);
+    }
+
+    public <P1, P2, R, S, T, E extends Exception> GivenAndThen(T entity, TriFunction<S, P1, P2, R> method, P1 param1, P2 param2, E exception, Function<T, S> holder) {
+        S covered = holder.apply(entity);
+        given = () -> method.apply(willThrow(exception).given(covered), param1, param2);
+        then = () -> method.apply(then(covered).should(), param1, param2);
     }
 
     public <R, T, U> Function<T, R> cover(Function<U, R> target, Function<T, U> holder) {

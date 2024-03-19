@@ -135,11 +135,11 @@ class MemberServiceTest {
 
     @DisplayName("활성/비활성 회원 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetctiveOrInactiveMembersRequestTests")
+    @MethodSource("createGetActiveOrInactiveMembersRequestTests")
     void getActiveOrInactiveMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, boolean request, List<Assertion<List<MemberDto>>> assertions) {
         testTemplate.performRequest(contexts, memberService::getMembers, request, assertions);
     }
-    static Stream<Arguments> createGetctiveOrInactiveMembersRequestTests() {
+    static Stream<Arguments> createGetActiveOrInactiveMembersRequestTests() {
         Member activeMember = createMember();
         Member inactiveMember = createMember();
         inactiveMember.deactivate();
@@ -255,7 +255,10 @@ class MemberServiceTest {
         MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).build();
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
+                VALID, List.of(
+                        new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc),
+                        new Context<>(deleteMember, member, memberRepoFunc)
+                ),
                 NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
                 FORBIDDEN, List.of()
         );

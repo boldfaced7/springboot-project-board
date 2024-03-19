@@ -1,6 +1,5 @@
 package com.boldfaced7.board.error.exception.member;
 
-import com.boldfaced7.board.Controller.MemberController;
 import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.ErrorResponse;
 import com.boldfaced7.board.error.exception.GlobalExceptionHandler;

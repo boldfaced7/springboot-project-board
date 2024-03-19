@@ -2,12 +2,14 @@ package com.boldfaced7.board;
 
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.domain.Member;
-import com.boldfaced7.board.repository.ArticleCommentRepository;
-import com.boldfaced7.board.repository.ArticleRepository;
-import com.boldfaced7.board.repository.MemberRepository;
+import com.boldfaced7.board.repository.*;
+import com.boldfaced7.board.repository.filestore.FileStore;
 import com.boldfaced7.board.service.DependencyHolder;
+import org.assertj.core.util.TriFunction;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,8 +43,29 @@ public class RepoMethod {
 
     public static final BiFunction<BCryptPasswordEncoder, String, String> encode = BCryptPasswordEncoder::encode;
 
+    public static final BiConsumer<AttachmentRepository, Attachment> deleteAttachment = AttachmentRepository::delete;
+    public static final BiFunction<AttachmentRepository, Attachment, Attachment> saveAttachment = AttachmentRepository::save;
+    public static final BiFunction<AttachmentRepository, Long, Optional<Attachment>> findAttachmentById = AttachmentRepository::findById;
+    public static final BiFunction<AttachmentRepository, String, Optional<Attachment>> findAttachmentByStoredName = AttachmentRepository::findByStoredName;
+    public static final BiFunction<AttachmentRepository, Article, List<Attachment>> findAttachmentsByArticle = AttachmentRepository::findAllByArticle;
+    public static final Function<AttachmentRepository, List<Attachment>> findAttachments = AttachmentRepository::findAll;
+    public static final TriFunction<AttachmentRepository, Article, List<String>, Integer> updateAttachments = AttachmentRepository::updateAttachments;
+    public static final BiFunction<AttachmentRepository, Article, Integer> deactivateAttachments = AttachmentRepository::deactivateAttachments;
+    public static final BiFunction<AttachmentRepository, Article, Integer> deleteAttachments = AttachmentRepository::deleteAttachments;
+
+
+    public static final BiFunction<FileStore, MultipartFile, Attachment> storeFile = FileStore::storeFile;
+    public static final BiFunction<FileStore, List<MultipartFile>, List<Attachment>> storeFiles = FileStore::storeFiles;
+    public static final BiFunction<FileStore, List<Attachment>, List<String>> getUrls = FileStore::getUrls;
+    public static final BiFunction<FileStore, Attachment, String> getUrl = FileStore::getUrl;
+    public static final BiConsumer<FileStore, Attachment> removeFile = FileStore::removeFile;
+    public static final BiConsumer<FileStore, List<Attachment>> removeFiles = FileStore::removeFiles;
+
     public static final Function<DependencyHolder, ArticleRepository> articleRepoFunc = DependencyHolder::getArticleRepository;
     public static final Function<DependencyHolder, ArticleCommentRepository> articleCommentRepoFunc = DependencyHolder::getArticleCommentRepository;
     public static final Function<DependencyHolder, MemberRepository> memberRepoFunc = DependencyHolder::getMemberRepository;
+    public static final Function<DependencyHolder, AttachmentRepository> attachmentRepoFunc = DependencyHolder::getAttachmentRepository;
     public static final Function<DependencyHolder, BCryptPasswordEncoder> encoderFunc = DependencyHolder::getEncoder;
+    public static final Function<DependencyHolder, FileStore> fileStoreFunc = DependencyHolder::getFileStore;
+
 }

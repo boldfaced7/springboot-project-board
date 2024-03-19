@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -23,11 +25,19 @@ public class UpdateArticleRequest {
     @Size(max = Article.MAX_CONTENT_LENGTH)
     private String content;
 
+    private List<String> attachmentNames;
+
+    public UpdateArticleRequest(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
+
     public ArticleDto toDto(Long targetId) {
         return ArticleDto.builder()
                 .articleId(targetId)
                 .title(title)
                 .content(content)
+                .attachmentNames(attachmentNames)
                 .build();
     }
 }

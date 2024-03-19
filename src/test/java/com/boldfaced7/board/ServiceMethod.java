@@ -1,15 +1,10 @@
 package com.boldfaced7.board;
 
-import com.boldfaced7.board.dto.ArticleCommentDto;
-import com.boldfaced7.board.dto.ArticleDto;
-import com.boldfaced7.board.dto.AuthDto;
-import com.boldfaced7.board.dto.MemberDto;
-import com.boldfaced7.board.service.ArticleCommentService;
-import com.boldfaced7.board.service.ArticleService;
-import com.boldfaced7.board.service.AuthService;
-import com.boldfaced7.board.service.MemberService;
+import com.boldfaced7.board.dto.*;
+import com.boldfaced7.board.service.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -38,4 +33,14 @@ public class ServiceMethod {
     public static final BiConsumer<MemberService, MemberDto> softDeleteMember = MemberService::softDeleteMember;
 
     public static final BiFunction<AuthService, AuthDto, AuthDto> login = AuthService::login;
+
+
+    public static final BiFunction<AttachmentService, Long, AttachmentDto> getAttachment = AttachmentService::getAttachment;
+    public static final Function<AttachmentService, List<AttachmentDto>> getAttachments = AttachmentService::getAttachments;
+    public static final BiFunction<AttachmentService, ArticleDto, List<AttachmentDto>> getAttachmentOfArticle = AttachmentService::getAttachments;
+    public static final BiFunction<AttachmentService, AttachmentDto, String> saveAttachment = AttachmentService::saveAttachment;
+    public static final BiFunction<AttachmentService, List<AttachmentDto>, List<String>> saveAttachments = AttachmentService::saveAttachments;
+    public static final BiConsumer<AttachmentService, AttachmentDto> softDeleteAttachment = AttachmentService::softDeleteAttachment;
+    public static final BiConsumer<AttachmentService, AttachmentDto> hardDeleteAttachment = AttachmentService::hardDeleteAttachment;
+
 }

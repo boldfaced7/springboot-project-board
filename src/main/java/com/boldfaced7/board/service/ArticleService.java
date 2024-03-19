@@ -3,8 +3,10 @@ package com.boldfaced7.board.service;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.AttachmentDto;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
@@ -12,9 +14,11 @@ import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
+import com.boldfaced7.board.repository.AttachmentRepository;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
+import com.boldfaced7.board.repository.filestore.FileStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +32,17 @@ public class ArticleService {
     private final ArticleRepository articleRepository;
     private final ArticleCommentRepository articleCommentRepository;
     private final MemberRepository memberRepository;
+    private final AttachmentRepository attachmentRepository;
+    private final FileStore fileStore;
+
+    @Transactional(readOnly = true)
+    public ArticleDto getArticle(Long articleId) {
+        Article article = findArticleById(articleId);
+        List<ArticleComment> articleComments = findArticleCommentsByArticle(article);
+        List<String> attachmentUrls = fileStore.getUrls(findAttachmentsByArticle(article));
+
+        return new ArticleDto(article, articleComments, attachmentUrls);
+    }
 
     @Transactional(readOnly = true)
     public List<ArticleDto> getArticles() {
@@ -45,59 +60,56 @@ public class ArticleService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public ArticleDto getArticle(Long articleId) {
-        Article article = findArticleById(articleId);
-        List<ArticleComment> articleComments = findArticleCommentsByArticle(article);
-
-        return new ArticleDto(article, articleComments);
-    }
-
     public Long saveArticle(ArticleDto dto) {
         Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
-
         Member member = findMemberById(memberId);
         Article article = articleRepository.save(dto.toEntityForSaving(member));
+
+        if (!dto.getAttachmentNames().isEmpty()) {
+            attachmentRepository.updateAttachments(article, dto.getAttachmentNames());
+        }
 
         return article.getId();
     }
 
     public void updateArticle(ArticleDto dto) {
-        Article article = findArticleByDto(dto);
+        Article article = findArticleById(dto.getArticleId());
         authorizeAuthor(article);
         article.update(dto.toEntityForUpdating());
+
+        if (!dto.getAttachmentNames().isEmpty()) {
+            attachmentRepository.updateAttachments(article, dto.getAttachmentNames());
+        }
     }
 
     public void softDeleteArticle(ArticleDto dto) {
-        Article article = findArticleByDto(dto);
+        Article article = findArticleById(dto.getArticleId());
         authorizeAuthor(article);
         article.deactivate();
+        attachmentRepository.deactivateAttachments(article);
     }
 
     public void hardDeleteArticle(ArticleDto dto) {
-        Article article = findArticleByDto(dto);
+        Article article = findArticleById(dto.getArticleId());
         authorizeAuthor(article);
         articleRepository.delete(article);
+        attachmentRepository.deleteAttachments(article);
     }
 
     private Article findArticleById(Long articleId) {
         return articleRepository.findById(articleId)
                 .orElseThrow(ArticleNotFoundException::new);
     }
-
-    private Article findArticleByDto(ArticleDto dto) {
-        return findArticleById(dto.getArticleId());
-    }
-
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
     }
-
     private List<ArticleComment> findArticleCommentsByArticle(Article article) {
         return articleCommentRepository.findAllByArticle(article);
     }
-
+    private List<Attachment> findAttachmentsByArticle(Article article) {
+        return attachmentRepository.findAllByArticle(article);
+    }
     private void authorizeAuthor(Article article) {
         AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
         if (authInfo == null || !authInfo.getMemberId().equals(article.getMember().getId())) {

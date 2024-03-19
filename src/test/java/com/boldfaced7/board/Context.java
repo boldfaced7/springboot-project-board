@@ -2,6 +2,7 @@ package com.boldfaced7.board;
 
 import com.boldfaced7.board.GivenAndThen;
 import lombok.Getter;
+import org.assertj.core.util.TriFunction;
 
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -57,6 +58,14 @@ public class Context<T> {
 
     public <P, R, S, E extends Exception> Context(BiFunction<S, P, R> method, P param, E exception, Function<T, S> holder) {
         constructor = (repo -> new GivenAndThen(repo, method, param, exception, holder));
+    }
+
+    public <P1, P2, R, S, E extends Exception> Context(TriFunction<S, P1, P2, R> method, P1 param1, P2 param2, R result, Function<T, S> holder) {
+        constructor = (repo -> new GivenAndThen(repo, method, param1, param2, result, holder));
+    }
+
+    public <P1, P2, R, S, E extends Exception> Context(TriFunction<S, P1, P2, R> method, P1 param1, P2 param2, E exception, Function<T, S> holder) {
+        constructor = (repo -> new GivenAndThen(repo, method, param1, param2, exception, holder));
     }
     /////
 

@@ -5,6 +5,7 @@ import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.MemberDto;
@@ -13,7 +14,9 @@ import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
+import com.boldfaced7.board.repository.AttachmentRepository;
 import com.boldfaced7.board.repository.MemberRepository;
+import com.boldfaced7.board.repository.filestore.LocalFileStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,13 +45,16 @@ class ArticleServiceTest {
     @Mock private ArticleRepository articleRepository;
     @Mock private ArticleCommentRepository articleCommentRepository;
     @Mock private MemberRepository memberRepository;
+    @Mock private AttachmentRepository attachmentRepository;
+    @Mock private LocalFileStore fileStore;
     ServiceTestTemplate testTemplate;
 
     @BeforeEach
     void setUp() {
         AuthInfoHolder.setAuthInfo(createAuthResponse());
         DependencyHolder dependencyHolder = DependencyHolder.builder().articleRepository(articleRepository)
-                .articleCommentRepository(articleCommentRepository).memberRepository(memberRepository).build();
+                .articleCommentRepository(articleCommentRepository).memberRepository(memberRepository)
+                .attachmentRepository(attachmentRepository).fileStore(fileStore).build();
 
         testTemplate = new ServiceTestTemplate(dependencyHolder);
     }
@@ -66,17 +72,21 @@ class ArticleServiceTest {
     }
     static Stream<Arguments> createGetArticleRequestTests() {
         Article article = createArticle();
+        List<Attachment> attachments = List.of(createAttachment());
         List<ArticleComment> articleComments = List.of(createArticleComment());
+        List<String> attachmentUrls = List.of("/resources/attachments/" + STORED_NAME);
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
                         new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc),
-                        new Context<>(findArticleCommentsByArticle, article, articleComments, articleCommentRepoFunc)
+                        new Context<>(findArticleCommentsByArticle, article, articleComments, articleCommentRepoFunc),
+                        new Context<>(findAttachmentsByArticle, article, attachments, attachmentRepoFunc),
+                        new Context<>(getUrls, attachments, attachmentUrls, fileStoreFunc)
                 ),
                 NOT_FOUND, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.empty(), articleRepoFunc))
         );
         Map<String, List<Assertion<ArticleDto>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(new ArticleDto(article, articleComments))),
+                VALID, List.of(new Assertion<>(new ArticleDto(article, articleComments, attachmentUrls))),
                 NOT_FOUND, List.of(new Assertion<>(ArticleNotFoundException.class))
         );
         return Stream.of(
@@ -134,12 +144,16 @@ class ArticleServiceTest {
     }
     static Stream<Arguments> createPostArticleRequestTests() {
         Member member = createMember();
-        ArticleDto requestDto = createArticleDto();
+        Article article = createArticle();
+
+        ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).title(TITLE)
+                .content(CONTENT).memberId(MEMBER_ID).attachmentNames(List.of(STORED_NAME)).build();
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
                         new Context<>(findMemberById, member.getId(), Optional.of(member), memberRepoFunc),
-                        new Context<>(saveArticle, requestDto.toEntityForSaving(member), createArticle(), articleRepoFunc)
+                        new Context<>(saveArticle, requestDto.toEntityForSaving(member), article, articleRepoFunc),
+                        new Context<>(updateAttachments, article, List.of(STORED_NAME), 1, attachmentRepoFunc)
                 ),
                 NOT_FOUND, List.of(new Context<>(findMemberById, requestDto.getMemberId(), Optional.empty(), memberRepoFunc))
         );
@@ -164,10 +178,14 @@ class ArticleServiceTest {
         Article forbiddenArticle = createArticle();
         ReflectionTestUtils.setField(forbiddenArticle.getMember(), "id", MEMBER_ID+1);
 
-        ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).title("New").content("New").build();
+        List<String> attachmentNames = List.of(STORED_NAME);
+        ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).title("New").content("New").attachmentNames(attachmentNames).build();
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc)),
+                VALID, List.of(
+                        new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc),
+                        new Context<>(updateAttachments, article, attachmentNames, 1, attachmentRepoFunc)
+                ),
                 NOT_FOUND, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.empty(), articleRepoFunc)),
                 FORBIDDEN, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.of(forbiddenArticle), articleRepoFunc))
         );
@@ -197,7 +215,10 @@ class ArticleServiceTest {
         ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).build();
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc)),
+                VALID, List.of(
+                        new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc),
+                        new Context<>(deactivateAttachments, article, 1, attachmentRepoFunc)
+                ),
                 NOT_FOUND, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.empty(), articleRepoFunc)),
                 FORBIDDEN, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.of(forbiddenArticle), articleRepoFunc))
         );
@@ -229,7 +250,8 @@ class ArticleServiceTest {
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
                         new Context<>(findArticleById, ARTICLE_ID, Optional.of(article), articleRepoFunc),
-                        new Context<>(deleteArticle, article, articleRepoFunc)
+                        new Context<>(deleteArticle, article, articleRepoFunc),
+                        new Context<>(deleteAttachments, article, 1, attachmentRepoFunc)
                 ),
                 NOT_FOUND, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.empty(), articleRepoFunc)),
                 FORBIDDEN, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.of(forbiddenArticle), articleRepoFunc))

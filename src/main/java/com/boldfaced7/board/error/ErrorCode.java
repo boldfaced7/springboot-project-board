@@ -20,6 +20,7 @@ public enum ErrorCode {
     ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLE001", "존재하지 않는 게시글입니다."),
     ARTICLE_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLECOMMNET001", "존재하지 않는 댓글입니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER001", "존재하지 않는 회원입니다."),
+    ATTACHMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ATTACHMENT001", "존재하지 않는 첨부파일입니다."),
 
     MEMBER_EMAIL_DUPLICATED(HttpStatus.BAD_REQUEST, "MEMBER002", "이미 존재하는 이메일입니다.");
 

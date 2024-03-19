@@ -2,14 +2,13 @@ package com.boldfaced7.board;
 
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
+import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.domain.Member;
-import com.boldfaced7.board.dto.ArticleCommentDto;
-import com.boldfaced7.board.dto.ArticleDto;
-import com.boldfaced7.board.dto.AuthDto;
-import com.boldfaced7.board.dto.MemberDto;
+import com.boldfaced7.board.dto.*;
 import com.boldfaced7.board.dto.request.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.ResultMatcher;
 
@@ -34,8 +33,17 @@ public class TestUtil {
     public static final String ARTICLES = "articles";
     public static final String ARTICLE_COMMENTS = "articleComments";
     public static final String MEMBERS = "members";
+    public static final String ATTACHMENTS = "attachments";
+
     public static final String PASSWORDS = "passwords";
     public static final String NICKNAMES = "nicknames";
+    public static final String IMAGE = "image";
+    public static final String JPG = ".jpg";
+    public static final String UPLOADED_NAME = "uploadedName";
+    public static final String STORED_NAME = "storedName";
+
+    public static final String FILE_DIR = "/resources/attachments/";
+    public static final String ATTACHMENT_URL = FILE_DIR + STORED_NAME;
     public static final String SIGNUP = "signUp";
     public static final String LOGIN = "login";
     public static final String LOGOUT = "logout";
@@ -86,6 +94,29 @@ public class TestUtil {
         return articleComment;
     }
 
+    public static Attachment createAttachment() {
+        return Attachment.builder()
+                .uploadedName(UPLOADED_NAME)
+                .storedName(STORED_NAME)
+                .article(createArticle())
+                .build();
+    }
+
+    public static Attachment createAttachment(Long id) {
+        Attachment attachment = Attachment.builder()
+                .uploadedName(UPLOADED_NAME)
+                .storedName(STORED_NAME)
+                .article(createArticle())
+                .build();
+
+        ReflectionTestUtils.setField(attachment, "id", id);
+        return attachment;
+    }
+
+    public static MockMultipartFile createMultipartFile() {
+        return new MockMultipartFile(IMAGE, UPLOADED_NAME+JPG, "image/jpeg", UPLOADED_NAME.getBytes());
+    }
+
     /*
     DTO
      */
@@ -124,6 +155,8 @@ public class TestUtil {
                 .author(AUTHOR)
                 .createdAt(LocalDateTime.now())
                 .modifiedAt(LocalDateTime.now())
+                .attachmentNames(List.of(STORED_NAME))
+                .attachmentUrls(List.of("/resources/attachments/" + STORED_NAME))
                 .articleComments(List.of(createArticleCommentDto()))
                 .build();
     }
@@ -167,6 +200,13 @@ public class TestUtil {
                 .nickname(NICKNAME)
                 .build();
     }
+
+    public static AttachmentDto createAttachmentDto() {
+        return AttachmentDto.builder()
+                .multipartFile(createMultipartFile())
+                .build();
+    }
+
     /*
     Request
      */
@@ -355,6 +395,10 @@ public class TestUtil {
 
     public static String memberArticleCommentUrl(Long memberId, Long articleCommentId) {
         return combine(memberUrl(memberId), articleCommentId);
+    }
+
+    public static String attachmentUrl() {
+        return combine(API, ATTACHMENTS);
     }
 
     private static String combine(String Url, Long Id) {

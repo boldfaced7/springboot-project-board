@@ -4,9 +4,8 @@ import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.AuthDto;
 import com.boldfaced7.board.error.exception.auth.InvalidAuthValueException;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final MemberRepository memberRepository;
-    private final BCryptPasswordEncoder encoder;
+    private final PasswordEncoder encoder;
 
     public AuthDto login(AuthDto authDto) {
-        String encodedPassword = encoder.encode(authDto.getPassword());
-        authDto.setPassword(encodedPassword);
-
         return memberRepository.findByEmail(authDto.getEmail())
                 .filter(Member::isActive)
-                .filter(m -> m.isCorrectPassword(authDto.getPassword()))
+                .filter(m -> encoder.matches(authDto.getPassword(), m.getPassword()))
                 .map(AuthDto::new)
                 .orElseThrow(InvalidAuthValueException::new);
     }

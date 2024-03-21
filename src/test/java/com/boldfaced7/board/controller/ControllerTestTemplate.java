@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-class ControllerTestTemplate<S> {
+public class ControllerTestTemplate<S> {
     MockMvc mvc;
     Gson gson;
     MockHttpSession session;

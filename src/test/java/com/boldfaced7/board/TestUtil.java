@@ -41,9 +41,6 @@ public class TestUtil {
     public static final String JPG = ".jpg";
     public static final String UPLOADED_NAME = "uploadedName";
     public static final String STORED_NAME = "storedName";
-
-    public static final String FILE_DIR = "/resources/attachments/";
-    public static final String ATTACHMENT_URL = FILE_DIR + STORED_NAME;
     public static final String SIGNUP = "signUp";
     public static final String LOGIN = "login";
     public static final String LOGOUT = "logout";
@@ -295,6 +292,10 @@ public class TestUtil {
     public static List<ResultMatcher> badRequest() {
         return List.of(status().isBadRequest());
     }
+    public static List<ResultMatcher> unauthorized() {
+        return List.of(status().isUnauthorized());
+    }
+
     public static List<ResultMatcher> forbidden() {
         return List.of(status().isForbidden());
     }

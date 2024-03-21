@@ -8,7 +8,7 @@ import com.boldfaced7.board.repository.*;
 import com.boldfaced7.board.repository.filestore.FileStore;
 import com.boldfaced7.board.service.DependencyHolder;
 import org.assertj.core.util.TriFunction;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -18,7 +18,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class RepoMethod {
-
     public static final BiConsumer<ArticleRepository, Article> deleteArticle = ArticleRepository::delete;
     public static final BiFunction<ArticleRepository, Article, Article> saveArticle = ArticleRepository::save;
     public static final BiFunction<ArticleRepository, Long, Optional<Article>> findArticleById = ArticleRepository::findById;
@@ -41,8 +40,8 @@ public class RepoMethod {
     public static final BiFunction<MemberRepository, String, Boolean> existsMemberByEmail = MemberRepository::existsByEmail;
     public static final BiFunction<MemberRepository, String, Boolean> existsMemberByNickname = MemberRepository::existsByNickname;
 
-    public static final BiFunction<BCryptPasswordEncoder, String, String> encode = BCryptPasswordEncoder::encode;
-
+    public static final BiFunction<PasswordEncoder, String, String> encode = PasswordEncoder::encode;
+    public static final TriFunction<PasswordEncoder, String, String, Boolean> matches = PasswordEncoder::matches;
     public static final BiConsumer<AttachmentRepository, Attachment> deleteAttachment = AttachmentRepository::delete;
     public static final BiFunction<AttachmentRepository, Attachment, Attachment> saveAttachment = AttachmentRepository::save;
     public static final BiFunction<AttachmentRepository, Long, Optional<Attachment>> findAttachmentById = AttachmentRepository::findById;
@@ -65,7 +64,7 @@ public class RepoMethod {
     public static final Function<DependencyHolder, ArticleCommentRepository> articleCommentRepoFunc = DependencyHolder::getArticleCommentRepository;
     public static final Function<DependencyHolder, MemberRepository> memberRepoFunc = DependencyHolder::getMemberRepository;
     public static final Function<DependencyHolder, AttachmentRepository> attachmentRepoFunc = DependencyHolder::getAttachmentRepository;
-    public static final Function<DependencyHolder, BCryptPasswordEncoder> encoderFunc = DependencyHolder::getEncoder;
+    public static final Function<DependencyHolder, PasswordEncoder> encoderFunc = DependencyHolder::getEncoder;
     public static final Function<DependencyHolder, FileStore> fileStoreFunc = DependencyHolder::getFileStore;
 
 }

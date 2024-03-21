@@ -11,8 +11,4 @@ import java.util.Optional;
 @Configuration
 public class JpaConfig {
 
-    @Bean // TODO: 인증 기능이 구현되면 수정해야
-    public AuditorAware<String> auditorAware() {
-        return () -> Optional.of("boldfaced7");
-    }
 }

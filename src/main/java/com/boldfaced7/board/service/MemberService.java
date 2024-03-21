@@ -7,9 +7,8 @@ import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +20,7 @@ import java.util.List;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final BCryptPasswordEncoder encoder;
+    private final PasswordEncoder encoder;
 
     @Transactional(readOnly = true)
     public boolean isOccupiedEmail(String email) {
@@ -89,6 +88,7 @@ public class MemberService {
     }
 
     private void encodePassword(MemberDto memberDto) {
+        if (memberDto.getPassword() == null) return;
         String encoded = encoder.encode(memberDto.getPassword());
         memberDto.setPassword(encoded);
     }

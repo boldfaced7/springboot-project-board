@@ -60,13 +60,14 @@ class AuthServiceTest {
         Member inactiveMember = createMember();
         inactiveMember.deactivate();
 
-        Context<DependencyHolder> encoder = new Context<>(encode, PASSWORD, PASSWORD, encoderFunc);
+        Context<DependencyHolder> success = new Context<>(matches, PASSWORD, PASSWORD, true, encoderFunc);
+        Context<DependencyHolder> fail = new Context<>(matches, PASSWORD, "New", false, encoderFunc);
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(createMember()), memberRepoFunc), encoder),
-                WRONG_EMAIL, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.empty(), memberRepoFunc), encoder),
-                WRONG_PASSWORD, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(pwFailMember), memberRepoFunc), encoder),
-                INACTIVE, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(inactiveMember), memberRepoFunc), encoder)
+                VALID, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(createMember()), memberRepoFunc), success),
+                WRONG_EMAIL, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.empty(), memberRepoFunc)),
+                WRONG_PASSWORD, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(pwFailMember), memberRepoFunc), fail),
+                INACTIVE, List.of(new Context<>(findMemberByEmail, requestDto.getEmail(), Optional.of(inactiveMember), memberRepoFunc))
         );
         Map<String, List<Assertion<AuthDto>>> assertions = Map.of(
                 VALID, List.of(new Assertion<>()),

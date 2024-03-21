@@ -8,7 +8,7 @@ import java.util.Objects;
 
 @Getter
 @Entity
-public class Article extends BaseEntity {
+public class Article extends BaseTimeEntity {
 
     public static final int MAX_TITLE_LENGTH = 100;
     public static final int MAX_CONTENT_LENGTH = 10000;

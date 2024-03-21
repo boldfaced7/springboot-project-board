@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -25,7 +26,7 @@ public class UpdateArticleRequest {
     @Size(max = Article.MAX_CONTENT_LENGTH)
     private String content;
 
-    private List<String> attachmentNames;
+    private List<String> attachmentNames = new ArrayList<>();
 
     public UpdateArticleRequest(String title, String content) {
         this.title = title;

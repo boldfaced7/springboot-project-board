@@ -4,6 +4,7 @@ import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.exception.BusinessBaseException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,8 +12,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -46,6 +47,7 @@ public class LocalFileStore implements FileStore {
 
     @Override
     public List<String> getUrls(List<Attachment> attachments) {
+        if (attachments.isEmpty()) return new ArrayList<>();
         return attachments.stream().map(this::getUrl).toList();
     }
 

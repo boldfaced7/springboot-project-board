@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -22,9 +23,9 @@ public class ArticleDto {
     private String author;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
-    private List<String> attachmentNames;
-    private List<String> attachmentUrls;
-    private List<ArticleCommentDto> articleComments;
+    private List<String> attachmentNames = new ArrayList<>();
+    private List<String> attachmentUrls = new ArrayList<>();
+    private List<ArticleCommentDto> articleComments = new ArrayList<>();
 
     public ArticleDto(Long articleId) {
         this.articleId = articleId;
@@ -38,17 +39,6 @@ public class ArticleDto {
         author = article.getMember().getNickname();
         createdAt = article.getCreatedAt();
         modifiedAt = article.getModifiedAt();
-    }
-
-    public ArticleDto(Article article, List<ArticleComment> articleComments) {
-        articleId = article.getId();
-        memberId = article.getMember().getId();
-        title = article.getTitle();
-        content = article.getContent();
-        author = article.getMember().getNickname();
-        createdAt = article.getCreatedAt();
-        modifiedAt = article.getModifiedAt();
-        this.articleComments = articleComments.stream().map(ArticleCommentDto::new).toList();
     }
 
     public ArticleDto(Article article, List<ArticleComment> articleComments, List<String> attachmentUrls) {

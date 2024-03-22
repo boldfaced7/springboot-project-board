@@ -22,6 +22,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -79,9 +81,9 @@ class ArticleCommentControllerTest {
     }
     static Stream<Arguments> createGetArticleCommentsRequestTest() {
         Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleComments, List.of(createArticleCommentDto()))
+                VALID, new Context<>(getArticleComments, PageRequest.of(0, 20), new PageImpl<>(List.of(createArticleCommentDto())))
         );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -96,13 +98,13 @@ class ArticleCommentControllerTest {
         testTemplate.doGet(context, articleArticleCommentUrl(ARTICLE_ID), resultMatchers);
     }
     static Stream<Arguments> createGetArticleCommentsOfArticleRequestTest() {
-        ArticleDto validArticleDto = ArticleDto.builder().articleId(ARTICLE_ID).build();
+        ArticleDto validArticleDto = new ArticleDto(ARTICLE_ID, PageRequest.of(0, 20));
 
         Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleCommentsOfArticle, validArticleDto, List.of(createArticleCommentDto())),
+                VALID, new Context<>(getArticleCommentsOfArticle, validArticleDto, new PageImpl<>(List.of(createArticleCommentDto()))),
                 NOT_FOUND, new Context<>(getArticleCommentsOfArticle, validArticleDto, new ArticleNotFoundException())
         );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -118,14 +120,14 @@ class ArticleCommentControllerTest {
         testTemplate.doGet(context, memberArticleCommentUrl(MEMBER_ID), resultMatchers);
     }
     static Stream<Arguments> createGetArticleCommentsOfMemberRequestTest() {
-        MemberDto validMemberDto = MemberDto.builder().memberId(MEMBER_ID).build();
+        MemberDto validMemberDto = new MemberDto(MEMBER_ID, PageRequest.of(0, 20));
 
         Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleCommentsOfMember, validMemberDto, List.of(createArticleCommentDto())),
+                VALID, new Context<>(getArticleCommentsOfMember, validMemberDto, new PageImpl<>(List.of(createArticleCommentDto()))),
                 NOT_FOUND, new Context<>(getArticleCommentsOfMember, validMemberDto, new MemberNotFoundException()),
                 FORBIDDEN, new Context<>(getArticleCommentsOfMember, validMemberDto, new ForbiddenException())
         );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

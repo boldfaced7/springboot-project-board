@@ -78,7 +78,7 @@ class ArticleCommentControllerIntegrationTest {
         testTemplate.doGet(null, articleCommentUrl(), resultMatchers);
     }
     static Stream<Arguments> createGetArticleCommentsRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -93,7 +93,7 @@ class ArticleCommentControllerIntegrationTest {
         testTemplate.doGet(null, articleArticleCommentUrl(articleId), resultMatchers);
     }
     static Stream<Arguments> createGetArticleCommentsOfArticleRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -109,7 +109,7 @@ class ArticleCommentControllerIntegrationTest {
         testTemplate.doGet(null, memberArticleCommentUrl(memberId), resultMatchers);
     }
     static Stream<Arguments> createGetArticleCommentsOfMemberRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments[0]");
+        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

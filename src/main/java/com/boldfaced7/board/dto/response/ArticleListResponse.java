@@ -5,15 +5,16 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
 @Data
 @NoArgsConstructor
 public class ArticleListResponse {
-    private List<ArticleResponse> articles;
+    private Page<ArticleResponse> articles;
 
-    public ArticleListResponse(List<ArticleDto> dtos) {
-        articles = dtos.stream().map(ArticleResponse::new).toList();
+    public ArticleListResponse(Page<ArticleDto> dtos) {
+        articles = dtos.map(ArticleResponse::new);
     }
 }

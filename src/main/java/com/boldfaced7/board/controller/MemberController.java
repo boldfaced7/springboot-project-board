@@ -8,6 +8,8 @@ import com.boldfaced7.board.dto.response.MemberListResponse;
 import com.boldfaced7.board.dto.response.MemberResponse;
 import com.boldfaced7.board.service.MemberService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +25,8 @@ public class MemberController {
     private final MemberService memberService;
 
     @GetMapping("/members")
-    public ResponseEntity<MemberListResponse> getMembers() {
-        List<MemberDto> members = memberService.getMembers();
+    public ResponseEntity<MemberListResponse> getMembers(Pageable pageable) {
+        Page<MemberDto> members = memberService.getMembers(pageable);
         MemberListResponse response = new MemberListResponse(members);
 
         return ResponseEntity.ok()

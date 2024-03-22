@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -12,9 +13,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 public class ArticleCommentListResponse {
-    private List<ArticleCommentResponse> articleComments;
+    private Page<ArticleCommentResponse> articleComments;
 
-    public ArticleCommentListResponse(List<ArticleCommentDto> dtos) {
-        articleComments = dtos.stream().map(ArticleCommentResponse::new).toList();
+    public ArticleCommentListResponse(Page<ArticleCommentDto> dtos) {
+        articleComments = dtos.map(ArticleCommentResponse::new);
     }
 }

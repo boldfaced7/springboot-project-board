@@ -67,8 +67,8 @@ class MemberControllerIntegrationTest {
         testTemplate.doGet(null, memberUrl(), resultMatchers);
     }
     static Stream<Arguments> createGetMembersRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), ".members[0]");
-        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), ".members[0]");
+        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), ".members.content[0]");
+        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), ".members.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, doesNotExists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

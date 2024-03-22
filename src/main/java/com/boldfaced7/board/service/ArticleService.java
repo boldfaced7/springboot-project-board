@@ -19,6 +19,8 @@ import com.boldfaced7.board.repository.MemberRepository;
 import com.boldfaced7.board.repository.filestore.FileStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,28 +38,25 @@ public class ArticleService {
     private final FileStore fileStore;
 
     @Transactional(readOnly = true)
-    public ArticleDto getArticle(Long articleId) {
-        Article article = findArticleById(articleId);
-        List<ArticleComment> articleComments = findArticleCommentsByArticle(article);
+    public ArticleDto getArticle(ArticleDto dto) {
+        Article article = findArticleById(dto.getArticleId());
+        Page<ArticleComment> articleComments = findArticleCommentsByArticle(article, dto.getPageable());
         List<String> attachmentUrls = fileStore.getUrls(findAttachmentsByArticle(article));
 
         return new ArticleDto(article, articleComments, attachmentUrls);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleDto> getArticles() {
-        return articleRepository.findAll().stream()
-                .map(ArticleDto::new)
-                .toList();
+    public Page<ArticleDto> getArticles(Pageable pageable) {
+        return articleRepository.findAll(pageable).map(ArticleDto::new);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleDto> getArticles(MemberDto memberDto) {
+    public Page<ArticleDto> getArticles(MemberDto memberDto) {
         Member member = findMemberById(memberDto.getMemberId());
+        Pageable pageable = memberDto.getPageable();
 
-        return articleRepository.findAllByMember(member).stream()
-                .map(ArticleDto::new)
-                .toList();
+        return articleRepository.findAllByMember(member, pageable).map(ArticleDto::new);
     }
 
     public Long saveArticle(ArticleDto dto) {
@@ -104,8 +103,8 @@ public class ArticleService {
         return memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
     }
-    private List<ArticleComment> findArticleCommentsByArticle(Article article) {
-        return articleCommentRepository.findAllByArticle(article);
+    private Page<ArticleComment> findArticleCommentsByArticle(Article article, Pageable pageable) {
+        return articleCommentRepository.findAllByArticle(article, pageable);
     }
     private List<Attachment> findAttachmentsByArticle(Article article) {
         return attachmentRepository.findAllByArticle(article);

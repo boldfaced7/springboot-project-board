@@ -7,6 +7,7 @@ import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.*;
 import com.boldfaced7.board.dto.request.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -154,7 +155,7 @@ public class TestUtil {
                 .modifiedAt(LocalDateTime.now())
                 .attachmentNames(List.of(STORED_NAME))
                 .attachmentUrls(List.of("/resources/attachments/" + STORED_NAME))
-                .articleComments(List.of(createArticleCommentDto()))
+                .articleComments(new PageImpl<>(List.of(createArticleCommentDto())))
                 .build();
     }
 

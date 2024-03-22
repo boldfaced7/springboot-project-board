@@ -7,6 +7,7 @@ import com.boldfaced7.board.dto.response.AuthResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 
@@ -19,6 +20,7 @@ public class ArticleCommentDto {
     private Long memberId;
     private String content;
     private String author;
+    private Pageable pageable;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 

@@ -15,12 +15,11 @@ import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Transactional
@@ -32,29 +31,25 @@ public class ArticleCommentService {
     private final MemberRepository memberRepository;
 
     @Transactional(readOnly = true)
-    public List<ArticleCommentDto> getArticleComments() {
-        return articleCommentRepository.findAll().stream()
-                .map(ArticleCommentDto::new)
-                .toList();
+    public Page<ArticleCommentDto> getArticleComments(Pageable pageable) {
+        return articleCommentRepository.findAll(pageable).map(ArticleCommentDto::new);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleCommentDto> getArticleComments(ArticleDto articleDto) {
+    public Page<ArticleCommentDto> getArticleComments(ArticleDto articleDto) {
         Article article = findArticleById(articleDto.getArticleId());
+        Pageable pageable = articleDto.getPageable();
 
-        return articleCommentRepository.findAllByArticle(article).stream()
-                .map(ArticleCommentDto::new)
-                .toList();
+        return articleCommentRepository.findAllByArticle(article, pageable).map(ArticleCommentDto::new);
     }
 
     @Transactional(readOnly = true)
-    public List<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
+    public Page<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
         Member member = findMemberById(memberDto.getMemberId());
+        Pageable pageable = memberDto.getPageable();
 
-        return articleCommentRepository.findAllByMember(member).stream()
-                .map(ArticleCommentDto::new)
-                .toList();
+        return articleCommentRepository.findAllByMember(member, pageable).map(ArticleCommentDto::new);
     }
 
     @Transactional(readOnly = true)
@@ -73,19 +68,19 @@ public class ArticleCommentService {
     }
 
     public void updateArticleComment(ArticleCommentDto dto) {
-        ArticleComment articleComment = findArticleCommentByDto(dto);
+        ArticleComment articleComment = findArticleCommentById(dto.getArticleCommentId());
         authorizeAuthor(articleComment);
         articleComment.update(dto.toEntityForUpdating());
     }
 
     public void softDeleteArticleComment(ArticleCommentDto dto) {
-        ArticleComment articleComment = findArticleCommentByDto(dto);
+        ArticleComment articleComment = findArticleCommentById(dto.getArticleCommentId());
         authorizeAuthor(articleComment);
         articleComment.deactivate();
     }
 
     public void hardDeleteArticleComment(ArticleCommentDto dto) {
-        ArticleComment articleComment = findArticleCommentByDto(dto);
+        ArticleComment articleComment = findArticleCommentById(dto.getArticleCommentId());
         authorizeAuthor(articleComment);
         articleCommentRepository.delete(articleComment);
     }
@@ -93,10 +88,6 @@ public class ArticleCommentService {
     private ArticleComment findArticleCommentById(Long articleCommentId) {
         return articleCommentRepository.findById(articleCommentId)
                 .orElseThrow(ArticleCommentNotFoundException::new);
-    }
-
-    private ArticleComment findArticleCommentByDto(ArticleCommentDto articleCommentDto) {
-        return findArticleCommentById(articleCommentDto.getArticleCommentId());
     }
 
     private Article findArticleById(Long articleId) {

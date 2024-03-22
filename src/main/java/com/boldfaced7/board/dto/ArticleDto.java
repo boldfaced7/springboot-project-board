@@ -7,6 +7,8 @@ import com.boldfaced7.board.domain.Member;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,14 +23,16 @@ public class ArticleDto {
     private String title;
     private String content;
     private String author;
+    private Pageable pageable;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
     private List<String> attachmentNames = new ArrayList<>();
     private List<String> attachmentUrls = new ArrayList<>();
-    private List<ArticleCommentDto> articleComments = new ArrayList<>();
+    private Page<ArticleCommentDto> articleComments = Page.empty();
 
-    public ArticleDto(Long articleId) {
+    public ArticleDto(Long articleId, Pageable pageable) {
         this.articleId = articleId;
+        this.pageable = pageable;
     }
 
     public ArticleDto(Article article) {
@@ -41,7 +45,7 @@ public class ArticleDto {
         modifiedAt = article.getModifiedAt();
     }
 
-    public ArticleDto(Article article, List<ArticleComment> articleComments, List<String> attachmentUrls) {
+    public ArticleDto(Article article, Page<ArticleComment> articleComments, List<String> attachmentUrls) {
         articleId = article.getId();
         memberId = article.getMember().getId();
         title = article.getTitle();
@@ -50,7 +54,7 @@ public class ArticleDto {
         createdAt = article.getCreatedAt();
         modifiedAt = article.getModifiedAt();
         this.attachmentUrls = attachmentUrls;
-        this.articleComments = articleComments.stream().map(ArticleCommentDto::new).toList();
+        this.articleComments = articleComments.map(ArticleCommentDto::new);
     }
 
     public Article toEntityForUpdating() {

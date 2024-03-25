@@ -16,16 +16,24 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
     void delete(Attachment attachment);
 
-    @Query("select a from Attachment a where a.id = :id and a.isActive = true")
+    @Query("select a from Attachment a" +
+            " join fetch a.article" +
+            " where a.id = :id and a.isActive = true")
     Optional<Attachment> findById(@Param("id") Long id);
 
-    @Query("select a from Attachment a where a.storedName = :storedName and a.isActive = true")
+    @Query("select a from Attachment a" +
+            " join fetch a.article" +
+            " where a.storedName = :storedName and a.isActive = true")
     Optional<Attachment> findByStoredName(@Param("storedName") String storedName);
 
-    @Query("select a from Attachment a where a.article = :article and a.isActive = true")
+    @Query("select a from Attachment a" +
+            " join fetch a.article" +
+            " where a.article = :article and a.isActive = true")
     List<Attachment> findAllByArticle(@Param("article") Article article);
 
-    @Query("select a from Attachment a where a.isActive = true")
+    @Query("select a from Attachment a" +
+            " join fetch a.article" +
+            " where a.isActive = true")
     List<Attachment> findAll();
 
     @Modifying

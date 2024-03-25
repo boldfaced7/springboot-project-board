@@ -25,7 +25,7 @@ public class Article extends BaseTimeEntity {
 
     private boolean isActive = true;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 

@@ -34,6 +34,26 @@ public class ArticleCommentDto {
         modifiedAt = articleComment.getModifiedAt();
     }
 
+    public ArticleCommentDto(ArticleComment articleComment, Article article) {
+        articleCommentId = articleComment.getId();
+        articleId = article.getId();
+        memberId = articleComment.getMember().getId();
+        content = articleComment.getContent();
+        author = articleComment.getMember().getNickname();
+        createdAt = articleComment.getCreatedAt();
+        modifiedAt = articleComment.getModifiedAt();
+    }
+
+    public ArticleCommentDto(ArticleComment articleComment, Member member) {
+        articleCommentId = articleComment.getId();
+        articleId = articleComment.getArticle().getId();
+        memberId = member.getId();
+        content = articleComment.getContent();
+        author = member.getNickname();
+        createdAt = articleComment.getCreatedAt();
+        modifiedAt = articleComment.getModifiedAt();
+    }
+
     public ArticleComment toEntityForUpdating() {
         return ArticleComment.builder()
                 .content(content)

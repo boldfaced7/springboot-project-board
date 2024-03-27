@@ -45,6 +45,16 @@ public class ArticleDto {
         modifiedAt = article.getModifiedAt();
     }
 
+    public ArticleDto(Article article, Member member) {
+        articleId = article.getId();
+        memberId = member.getId();
+        title = article.getTitle();
+        content = article.getContent();
+        author = member.getNickname();
+        createdAt = article.getCreatedAt();
+        modifiedAt = article.getModifiedAt();
+    }
+
     public ArticleDto(Article article, Page<ArticleComment> articleComments, List<String> attachmentUrls) {
         articleId = article.getId();
         memberId = article.getMember().getId();
@@ -54,7 +64,7 @@ public class ArticleDto {
         createdAt = article.getCreatedAt();
         modifiedAt = article.getModifiedAt();
         this.attachmentUrls = attachmentUrls;
-        this.articleComments = articleComments.map(ArticleCommentDto::new);
+        this.articleComments = articleComments.map(ac -> new ArticleCommentDto(ac, article));
     }
 
     public Article toEntityForUpdating() {

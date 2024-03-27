@@ -27,18 +27,20 @@ public class AttachmentDto {
         this.storedName = attachment.getStoredName();
         this.createdAt = attachment.getCreatedAt();
     }
+
+    public AttachmentDto(Attachment attachment, Article article) {
+        this.attachmentId = attachment.getId();
+        this.articleId = article.getId();
+        this.uploadedName = attachment.getUploadedName();
+        this.storedName = attachment.getStoredName();
+        this.createdAt = attachment.getCreatedAt();
+    }
+
     public AttachmentDto(String storedName) {
         this.storedName = storedName;
     }
 
     public AttachmentDto(MultipartFile multipartFile) {
         this.multipartFile = multipartFile;
-    }
-
-    public Attachment toEntity(Article article) {
-        return Attachment.builder()
-                .article(article)
-                .uploadedName(uploadedName)
-                .build();
     }
 }

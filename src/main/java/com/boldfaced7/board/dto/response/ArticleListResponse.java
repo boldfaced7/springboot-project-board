@@ -15,6 +15,18 @@ public class ArticleListResponse {
     private Page<ArticleResponse> articles;
 
     public ArticleListResponse(Page<ArticleDto> dtos) {
-        articles = dtos.map(ArticleResponse::new);
+        articles = dtos.map(this::toListResponse);
+    }
+
+    private ArticleResponse toListResponse(ArticleDto dto) {
+        return ArticleResponse.builder()
+                .articleId(dto.getArticleId())
+                .memberId(dto.getMemberId())
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .author(dto.getAuthor())
+                .createdAt(dto.getCreatedAt())
+                .modifiedAt(dto.getModifiedAt())
+                .build();
     }
 }

@@ -27,7 +27,6 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     Optional<Attachment> findByStoredName(@Param("storedName") String storedName);
 
     @Query("select a from Attachment a" +
-            " join fetch a.article" +
             " where a.article = :article and a.isActive = true")
     List<Attachment> findAllByArticle(@Param("article") Article article);
 

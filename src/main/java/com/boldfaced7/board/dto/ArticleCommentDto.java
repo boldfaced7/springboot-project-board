@@ -7,6 +7,7 @@ import com.boldfaced7.board.dto.response.AuthResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 
@@ -19,6 +20,7 @@ public class ArticleCommentDto {
     private Long memberId;
     private String content;
     private String author;
+    private Pageable pageable;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
 
@@ -28,6 +30,26 @@ public class ArticleCommentDto {
         memberId = articleComment.getMember().getId();
         content = articleComment.getContent();
         author = articleComment.getMember().getNickname();
+        createdAt = articleComment.getCreatedAt();
+        modifiedAt = articleComment.getModifiedAt();
+    }
+
+    public ArticleCommentDto(ArticleComment articleComment, Article article) {
+        articleCommentId = articleComment.getId();
+        articleId = article.getId();
+        memberId = articleComment.getMember().getId();
+        content = articleComment.getContent();
+        author = articleComment.getMember().getNickname();
+        createdAt = articleComment.getCreatedAt();
+        modifiedAt = articleComment.getModifiedAt();
+    }
+
+    public ArticleCommentDto(ArticleComment articleComment, Member member) {
+        articleCommentId = articleComment.getId();
+        articleId = articleComment.getArticle().getId();
+        memberId = member.getId();
+        content = articleComment.getContent();
+        author = member.getNickname();
         createdAt = articleComment.getCreatedAt();
         modifiedAt = articleComment.getModifiedAt();
     }

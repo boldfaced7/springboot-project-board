@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,7 +24,7 @@ public class ArticleResponse {
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
     private List<String> attachmentUrls;
-    private List<ArticleCommentResponse> articleComments;
+    private Page<ArticleCommentResponse> articleComments;
 
 
     public ArticleResponse(ArticleDto dto) {
@@ -35,7 +36,6 @@ public class ArticleResponse {
         createdAt = dto.getCreatedAt();
         modifiedAt = dto.getModifiedAt();
         attachmentUrls = dto.getAttachmentUrls();
-        articleComments = dto.getArticleComments().stream()
-                .map(ArticleCommentResponse::new).toList();
+        articleComments = dto.getArticleComments().map(ArticleCommentResponse::new);
     }
 }

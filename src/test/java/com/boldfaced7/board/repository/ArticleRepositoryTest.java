@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -54,7 +56,7 @@ class ArticleRepositoryTest {
         article.deactivate();
 
         // When
-        List<Article> articles = articleRepository.findAllByIsActiveIsTrue();
+        List<Article> articles = articleRepository.findAll();
 
         //Then
         assertThat(articles).hasSize(0);
@@ -65,13 +67,14 @@ class ArticleRepositoryTest {
     void givenMemberAndArticle_whenSelecting_thenWorksFine() {
         //Given
         Member member = memberRepository.save(createMember());
-        Article article = articleRepository.save(createArticle(member));
+        articleRepository.save(createArticle(member));
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<Article> members = articleRepository.findAllByMember(member);
+        Page<Article> members = articleRepository.findAllByMember(member, pageable);
 
         // Then
-        assertThat(members.get(0).isActive()).isTrue();
+        assertThat(members.getContent().get(0).isActive()).isTrue();
     }
 
     @DisplayName("findAllByMember()가 isActive가 false인 Article 객체를 반환하지 않는지 확인")
@@ -81,9 +84,10 @@ class ArticleRepositoryTest {
         Member member = memberRepository.save(createMember());
         Article article = articleRepository.save(createArticle(member));
         article.deactivate();
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<Article> members = articleRepository.findAllByMember(member);
+        Page<Article> members = articleRepository.findAllByMember(member, pageable);
 
         // Then
         assertThat(members).isEmpty();

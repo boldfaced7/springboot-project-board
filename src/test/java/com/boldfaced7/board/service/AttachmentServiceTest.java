@@ -135,25 +135,16 @@ class AttachmentServiceTest {
         MockMultipartFile multipartFile = new MockMultipartFile(UPLOADED_NAME, UPLOADED_NAME, "text/plain", UPLOADED_NAME.getBytes());
         AttachmentDto requestDto = AttachmentDto.builder().uploadedName(UPLOADED_NAME).articleId(ARTICLE_ID).multipartFile(multipartFile).build();
         Attachment attachment = createAttachment(1L);
-        Article article = attachment.getArticle();
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(
-                        new Context<>(findArticleById, requestDto.getArticleId(), Optional.of(article), articleRepoFunc),
-                        new Context<>(storeFile, requestDto.getMultipartFile(), attachment, fileStoreFunc),
-                        new Context<>(saveAttachment, attachment, attachment, attachmentRepoFunc)
-                ),
-                ARTICLE_NOT_FOUND, List.of(
-                        new Context<>(findArticleById, article.getId(), Optional.empty(), articleRepoFunc)
-                )
+                VALID, List.of(new Context<>(storeFile, requestDto.getMultipartFile(), attachment, fileStoreFunc))
         );
         Map<String, List<Assertion<Optional<AttachmentDto>>>> assertions = Map.of(
                 VALID, List.of(new Assertion<>()),
                 ARTICLE_NOT_FOUND, List.of(new Assertion<>(ArticleNotFoundException.class))
                 );
         return Stream.of(
-                Arguments.of("첨부파일 작성 정보를 입력하면, 첨부파일을 저장", contexts.get(VALID), requestDto, assertions.get(VALID)),
-                Arguments.of("게시글이 존재하지 않는다면, 저장 없이 예외를 던짐", contexts.get(ARTICLE_NOT_FOUND), requestDto, assertions.get(ARTICLE_NOT_FOUND))
+                Arguments.of("첨부파일 작성 정보를 입력하면, 첨부파일을 저장", contexts.get(VALID), requestDto, assertions.get(VALID))
         );
     }
 

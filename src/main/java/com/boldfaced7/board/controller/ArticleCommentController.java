@@ -9,6 +9,8 @@ import com.boldfaced7.board.dto.response.ArticleCommentListResponse;
 import com.boldfaced7.board.dto.response.ArticleCommentResponse;
 import com.boldfaced7.board.service.ArticleCommentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +25,22 @@ public class ArticleCommentController {
 
     private final ArticleCommentService articleCommentService;
 
-    @GetMapping("/articleComments")
-    public ResponseEntity<ArticleCommentListResponse> getArticleComments() {
+    @GetMapping({"/articleComments/{articleCommentId}",
+            "articles/{articleId}/articleComments/{articleCommentId}"})
+    public ResponseEntity<ArticleCommentResponse> getArticleComment(
+            @PathVariable Long articleCommentId) {
 
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments();
+        ArticleCommentDto dto = articleCommentService.getArticleComment(articleCommentId);
+        ArticleCommentResponse response = new ArticleCommentResponse(dto);
+
+        return ResponseEntity.ok()
+                .body(response);
+    }
+
+    @GetMapping("/articleComments")
+    public ResponseEntity<ArticleCommentListResponse> getArticleComments(Pageable pageable) {
+
+        Page<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(pageable);
         ArticleCommentListResponse response = new ArticleCommentListResponse(articleComments);
 
         return ResponseEntity.ok()
@@ -35,10 +49,10 @@ public class ArticleCommentController {
 
     @GetMapping("/articles/{articleId}/articleComments")
     public ResponseEntity<ArticleCommentListResponse> getArticleCommentsFromArticle(
-            @PathVariable Long articleId) {
+            @PathVariable Long articleId, Pageable pageable) {
 
-        ArticleDto dto = new ArticleDto(articleId);
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(dto);
+        ArticleDto dto = new ArticleDto(articleId, pageable);
+        Page<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(dto);
         ArticleCommentListResponse response = new ArticleCommentListResponse(articleComments);
 
         return ResponseEntity.ok()
@@ -47,23 +61,11 @@ public class ArticleCommentController {
 
     @GetMapping("/members/{memberId}/articleComments")
     public ResponseEntity<ArticleCommentListResponse> getArticleCommentsFromMember(
-            @PathVariable Long memberId) {
+            @PathVariable Long memberId, Pageable pageable) {
 
-        MemberDto dto = new MemberDto(memberId);
-        List<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(dto);
+        MemberDto dto = new MemberDto(memberId, pageable);
+        Page<ArticleCommentDto> articleComments = articleCommentService.getArticleComments(dto);
         ArticleCommentListResponse response = new ArticleCommentListResponse(articleComments);
-
-        return ResponseEntity.ok()
-                .body(response);
-    }
-
-    @GetMapping({"/articleComments/{articleCommentId}",
-                 "articles/{articleId}/articleComments/{articleCommentId}"})
-    public ResponseEntity<ArticleCommentResponse> getArticleComment(
-            @PathVariable Long articleCommentId) {
-
-        ArticleCommentDto dto = articleCommentService.getArticleComment(articleCommentId);
-        ArticleCommentResponse response = new ArticleCommentResponse(dto);
 
         return ResponseEntity.ok()
                 .body(response);

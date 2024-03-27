@@ -8,6 +8,8 @@ import com.boldfaced7.board.repository.*;
 import com.boldfaced7.board.repository.filestore.FileStore;
 import com.boldfaced7.board.service.DependencyHolder;
 import org.assertj.core.util.TriFunction;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,27 +23,27 @@ public class RepoMethod {
     public static final BiConsumer<ArticleRepository, Article> deleteArticle = ArticleRepository::delete;
     public static final BiFunction<ArticleRepository, Article, Article> saveArticle = ArticleRepository::save;
     public static final BiFunction<ArticleRepository, Long, Optional<Article>> findArticleById = ArticleRepository::findById;
-    public static final Function<ArticleRepository, List<Article>> findArticles = ArticleRepository::findAll;
-    public static final BiFunction<ArticleRepository, Member, List<Article>> findArticlesByMember = ArticleRepository::findAllByMember;
+    public static final BiFunction<ArticleRepository, Pageable, Page<Article>> findArticles = ArticleRepository::findAll;
+    public static final TriFunction<ArticleRepository, Member, Pageable, Page<Article>> findArticlesByMember = ArticleRepository::findAllByMember;
 
     public static final BiConsumer<ArticleCommentRepository, ArticleComment> deleteArticleComment = ArticleCommentRepository::delete;
     public static final BiFunction<ArticleCommentRepository, ArticleComment, ArticleComment> saveArticleComment = ArticleCommentRepository::save;
     public static final BiFunction<ArticleCommentRepository, Long, Optional<ArticleComment>> findArticleCommentById = ArticleCommentRepository::findById;
-    public static final Function<ArticleCommentRepository, List<ArticleComment>> findArticleComments = ArticleCommentRepository::findAll;
-    public static final BiFunction<ArticleCommentRepository, Member, List<ArticleComment>> findArticleCommentsByMember = ArticleCommentRepository::findAllByMember;
-    public static final BiFunction<ArticleCommentRepository, Article, List<ArticleComment>> findArticleCommentsByArticle = ArticleCommentRepository::findAllByArticle;
+    public static final BiFunction<ArticleCommentRepository, Pageable, Page<ArticleComment>> findArticleComments = ArticleCommentRepository::findAll;
+    public static final TriFunction<ArticleCommentRepository, Member, Pageable, Page<ArticleComment>> findArticleCommentsByMember = ArticleCommentRepository::findAllByMember;
+    public static final TriFunction<ArticleCommentRepository, Article, Pageable, Page<ArticleComment>> findArticleCommentsByArticle = ArticleCommentRepository::findAllByArticle;
 
     public static final BiConsumer<MemberRepository, Member> deleteMember = MemberRepository::delete;
     public static final BiFunction<MemberRepository, Member, Member> saveMember = MemberRepository::save;
     public static final BiFunction<MemberRepository, Long, Optional<Member>> findMemberById = MemberRepository::findById;
     public static final BiFunction<MemberRepository, String, Optional<Member>> findMemberByEmail = MemberRepository::findByEmail;
-    public static final Function<MemberRepository, List<Member>> findMembers = MemberRepository::findAll;
-    public static final BiFunction<MemberRepository, Boolean, List<Member>> findMembersByIsActive = MemberRepository::findAll;
+    public static final BiFunction<MemberRepository, Pageable, Page<Member>> findMembers = MemberRepository::findAll;
     public static final BiFunction<MemberRepository, String, Boolean> existsMemberByEmail = MemberRepository::existsByEmail;
     public static final BiFunction<MemberRepository, String, Boolean> existsMemberByNickname = MemberRepository::existsByNickname;
 
     public static final BiFunction<PasswordEncoder, String, String> encode = PasswordEncoder::encode;
     public static final TriFunction<PasswordEncoder, String, String, Boolean> matches = PasswordEncoder::matches;
+
     public static final BiConsumer<AttachmentRepository, Attachment> deleteAttachment = AttachmentRepository::delete;
     public static final BiFunction<AttachmentRepository, Attachment, Attachment> saveAttachment = AttachmentRepository::save;
     public static final BiFunction<AttachmentRepository, Long, Optional<Attachment>> findAttachmentById = AttachmentRepository::findById;

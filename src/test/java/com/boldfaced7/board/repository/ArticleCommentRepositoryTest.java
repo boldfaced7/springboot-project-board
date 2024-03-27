@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -88,13 +90,14 @@ class ArticleCommentRepositoryTest {
     void givenArticleAndArticleComment_whenSelectingArticleCommentsOfArticle_thenWorksFine() {
         //Given
         Article article = articleRepository.save(createArticle());
-        ArticleComment articleComment = articleCommentRepository.save(createArticleComment(article));
+        articleCommentRepository.save(createArticleComment(article));
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<ArticleComment> articleComments = articleCommentRepository.findAllByArticle(article);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByArticle(article, pageable);
 
         // Then
-        assertThat(articleComments.get(0).isActive()).isTrue();
+        assertThat(articleComments.getContent().get(0).isActive()).isTrue();
     }
 
     @DisplayName("findAllByArticle()이 isActive가 false인 ArticleComment 객체를 반환하지 않는지 확인")
@@ -104,9 +107,10 @@ class ArticleCommentRepositoryTest {
         Article article = articleRepository.save(createArticle());
         ArticleComment articleComment = articleCommentRepository.save(createArticleComment(article));
         articleComment.deactivate();
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<ArticleComment> articleComments = articleCommentRepository.findAllByArticle(article);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByArticle(article, pageable);
 
         // Then
         assertThat(articleComments).isEmpty();
@@ -117,13 +121,14 @@ class ArticleCommentRepositoryTest {
     void givenMemberAndArticle_whenSelecting_thenWorksFine() {
         //Given
         Member member = memberRepository.save(createMember());
-        ArticleComment articleComment = articleCommentRepository.save(createArticleComment(member));
+        articleCommentRepository.save(createArticleComment(member));
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member, pageable);
 
         // Then
-        assertThat(articleComments.get(0).isActive()).isTrue();
+        assertThat(articleComments.getContent().get(0).isActive()).isTrue();
     }
 
     @DisplayName("findAllByMember()가 isActive가 false인 Article 객체를 반환하지 않는지 확인")
@@ -133,9 +138,10 @@ class ArticleCommentRepositoryTest {
         Member member = memberRepository.save(createMember());
         ArticleComment articleComment = articleCommentRepository.save(createArticleComment(member));
         articleComment.deactivate();
+        PageRequest pageable = PageRequest.of(0, 0);
 
         // When
-        List<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member, pageable);
 
         // Then
         assertThat(articleComments).isEmpty();

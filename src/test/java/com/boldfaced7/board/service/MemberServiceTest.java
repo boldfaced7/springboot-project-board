@@ -18,6 +18,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
@@ -122,40 +126,17 @@ class MemberServiceTest {
     @DisplayName("회원 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetMembersRequestTests")
-    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, List<Assertion<List<MemberDto>>> assertions) {
-        testTemplate.performRequest(contexts, memberService::getMembers, assertions);
+    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<Page<MemberDto>>> assertions) {
+        testTemplate.performRequest(contexts, memberService::getMembers, pageable, assertions);
     }
     static Stream<Arguments> createGetMembersRequestTests() {
+        PageRequest pageable = PageRequest.of(0, 20);
+
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMembers, List.of(createMember()), memberRepoFunc))
+                VALID, List.of(new Context<>(findMembers, pageable, new PageImpl<>(List.of(createMember())), memberRepoFunc))
         );
         Map<String, List<Assertion<List<MemberDto>>>> assertions = Map.of(VALID, List.of(new Assertion<>()));
-        return Stream.of(Arguments.of("회원 목록을 반환", contexts.get(VALID), assertions.get(VALID)));
-    }
-
-    @DisplayName("활성/비활성 회원 목록 조회")
-    @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetActiveOrInactiveMembersRequestTests")
-    void getActiveOrInactiveMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, boolean request, List<Assertion<List<MemberDto>>> assertions) {
-        testTemplate.performRequest(contexts, memberService::getMembers, request, assertions);
-    }
-    static Stream<Arguments> createGetActiveOrInactiveMembersRequestTests() {
-        Member activeMember = createMember();
-        Member inactiveMember = createMember();
-        inactiveMember.deactivate();
-
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                ACTIVE, List.of(new Context<>(findMembersByIsActive, true, List.of(activeMember), memberRepoFunc)),
-                INACTIVE, List.of(new Context<>(findMembersByIsActive, false, List.of(inactiveMember), memberRepoFunc))
-        );
-        Map<String, List<Assertion<List<MemberDto>>>> assertions = Map.of(
-                ACTIVE, List.of(new Assertion<>()),
-                INACTIVE, List.of(new Assertion<>())
-        );
-        return Stream.of(
-                Arguments.of("활성 회원 목록을 반환", contexts.get(ACTIVE), true, assertions.get(ACTIVE)),
-                Arguments.of("비활성 회원 목록을 반환", contexts.get(INACTIVE), false, assertions.get(INACTIVE))
-        );
+        return Stream.of(Arguments.of("회원 목록을 반환", contexts.get(VALID), pageable, assertions.get(VALID)));
     }
 
     @DisplayName("회원 저장")

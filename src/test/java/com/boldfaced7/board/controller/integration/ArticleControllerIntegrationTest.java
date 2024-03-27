@@ -65,7 +65,7 @@ class ArticleControllerIntegrationTest {
         testTemplate.doGet(null, articleUrl(), resultMatchers);
     }
     static Stream<Arguments> createGetArticlesRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles[0]");
+        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -80,7 +80,7 @@ class ArticleControllerIntegrationTest {
         testTemplate.doGet(null, memberArticleUrl(memberId), resultMatchers);
     }
     static Stream<Arguments> createGetArticlesOfMemberRequestTest() {
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles[0]");
+        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

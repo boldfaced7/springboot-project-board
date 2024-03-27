@@ -20,6 +20,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -55,9 +57,11 @@ class ArticleControllerTest {
         testTemplate.doGet(context, articleUrl(ARTICLE_ID), resultMatchers);
     }
     static Stream<Arguments> createGetArticleRequestTests() {
+        ArticleDto requestDto = new ArticleDto(ARTICLE_ID, PageRequest.of(0, 20));
+
         Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticle, ARTICLE_ID, createArticleDto()),
-                NOT_FOUND, new Context<>(getArticle, ARTICLE_ID, new ArticleNotFoundException())
+                VALID, new Context<>(getArticle, requestDto, createArticleDto()),
+                NOT_FOUND, new Context<>(getArticle, requestDto, new ArticleNotFoundException())
         );
         List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), "");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
@@ -76,9 +80,9 @@ class ArticleControllerTest {
     }
     static Stream<Arguments> createGetArticlesRequestTest() {
         Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticles, List.of(createArticleDto()))
+                VALID, new Context<>(getArticles, PageRequest.of(0, 20), new PageImpl<>(List.of(createArticleDto())))
         );
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles[0]");
+        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(
@@ -93,13 +97,13 @@ class ArticleControllerTest {
         testTemplate.doGet(context, memberArticleUrl(MEMBER_ID), resultMatchers);
     }
     static Stream<Arguments> createGetArticlesOfMemberRequestTest() {
-        MemberDto validMemberRequestDto = MemberDto.builder().memberId(MEMBER_ID).build();
+        MemberDto validMemberRequestDto = new MemberDto(MEMBER_ID, PageRequest.of(0, 20));
 
         Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticlesOfMember, validMemberRequestDto, List.of(createArticleDto())),
+                VALID, new Context<>(getArticlesOfMember, validMemberRequestDto, new PageImpl<>(List.of(createArticleDto()))),
                 NOT_FOUND, new Context<>(getArticlesOfMember, validMemberRequestDto, new MemberNotFoundException())
         );
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles[0]");
+        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

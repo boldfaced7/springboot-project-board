@@ -8,11 +8,11 @@ import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Transactional
@@ -33,17 +33,15 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public List<MemberDto> getMembers() {
-        return memberRepository.findAll().stream()
-                .map(MemberDto::new)
-                .toList();
+    public Page<MemberDto> getMembers(Pageable pageable) {
+        return memberRepository.findAll(pageable)
+                .map(MemberDto::new);
     }
 
     @Transactional(readOnly = true)
-    public List<MemberDto> getMembers(boolean isActive) {
-        return memberRepository.findAll(isActive).stream()
-                .map(MemberDto::new)
-                .toList();
+    public Page<MemberDto> getMembers(MemberDto dto) {
+        return memberRepository.findAll(dto.isActive(), dto.getPageable())
+                .map(MemberDto::new);
     }
 
     @Transactional(readOnly = true)
@@ -60,7 +58,7 @@ public class MemberService {
 
     public void updateMember(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
-        Member member = findMemberByDto(memberDto);
+        Member member = findMemberById(memberDto.getMemberId());
 
         encodePassword(memberDto);
         member.update(memberDto.toEntity());
@@ -68,23 +66,19 @@ public class MemberService {
 
     public void softDeleteMember(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
-        Member member = findMemberByDto(memberDto);
+        Member member = findMemberById(memberDto.getMemberId());
         member.deactivate();
     }
 
     public void hardDeleteMember(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
-        Member member = findMemberByDto(memberDto);
+        Member member = findMemberById(memberDto.getMemberId());
         memberRepository.delete(member);
     }
 
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
-    }
-
-    private Member findMemberByDto(MemberDto dto) {
-        return findMemberById(dto.getMemberId());
     }
 
     private void encodePassword(MemberDto memberDto) {

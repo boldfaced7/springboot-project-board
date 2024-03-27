@@ -26,6 +26,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -85,33 +89,36 @@ class ArticleCommentServiceTest {
     @DisplayName("댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsRequestTests")
-    void getArticleCommentsTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, List<Assertion<List<ArticleCommentDto>>> assertions) {
-        testTemplate.performRequest(contexts, articleCommentService::getArticleComments, assertions);
+    void getArticleCommentsTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<Page<ArticleCommentDto>>> assertions) {
+        testTemplate.performRequest(contexts, articleCommentService::getArticleComments, pageable, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsRequestTests() {
+        PageRequest pageable = PageRequest.of(0, 20);
+
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findArticleComments, List.of(createArticleComment()), articleCommentRepoFunc))
+                VALID, List.of(new Context<>(findArticleComments, pageable, new PageImpl<>(List.of(createArticleComment())), articleCommentRepoFunc))
         );
         Map<String, List<Assertion<List<ArticleCommentDto>>>> assertions = Map.of(
                 VALID, List.of(new Assertion<>())
         );
-        return Stream.of(Arguments.of("댓글 목록을 반환", contexts.get(VALID), assertions.get(VALID)));
+        return Stream.of(Arguments.of("댓글 목록을 반환", contexts.get(VALID), pageable, assertions.get(VALID)));
     }
 
     @DisplayName("게시글의 댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsOfArticleRequestTests")
-    void getArticleCommentsOfArticleTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleDto request, List<Assertion<List<ArticleCommentDto>>> assertions) {
+    void getArticleCommentsOfArticleTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleDto request, List<Assertion<Page<ArticleCommentDto>>> assertions) {
         testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsOfArticleRequestTests() {
         Article article = createArticle();
-        ArticleDto requestDto = ArticleDto.builder().articleId(ARTICLE_ID).build();
+        PageRequest pageable = PageRequest.of(0, 20);
+        ArticleDto requestDto = new ArticleDto(ARTICLE_ID, pageable);
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
                         new Context<>(findArticleById, requestDto.getArticleId(), Optional.of(article), articleRepoFunc),
-                        new Context<>(findArticleCommentsByArticle, article, List.of(createArticleComment()), articleCommentRepoFunc)
+                        new Context<>(findArticleCommentsByArticle, article, pageable, new PageImpl<>(List.of(createArticleComment())), articleCommentRepoFunc)
                 ),
                 NOT_FOUND, List.of(new Context<>(findArticleById, requestDto.getArticleId(), Optional.empty(), articleRepoFunc))
         );
@@ -128,17 +135,18 @@ class ArticleCommentServiceTest {
     @DisplayName("회원 작성 댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsOfMemberRequestTests")
-    void getArticleCommentsOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<List<ArticleCommentDto>>> assertions) {
+    void getArticleCommentsOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Page<ArticleCommentDto>>> assertions) {
         testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsOfMemberRequestTests() {
         Member member = createMember();
-        MemberDto requestMemberDto = new MemberDto(MEMBER_ID);
+        PageRequest pageable = PageRequest.of(0, 20);
+        MemberDto requestMemberDto = new MemberDto(member.getId(), pageable);
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
                         new Context<>(findMemberById, requestMemberDto.getMemberId(), Optional.of(member), memberRepoFunc),
-                        new Context<>(findArticleCommentsByMember, member, List.of(createArticleComment()), articleCommentRepoFunc)
+                        new Context<>(findArticleCommentsByMember, member, pageable, new PageImpl<>(List.of(createArticleComment())), articleCommentRepoFunc)
                 ),
                 NOT_FOUND, List.of(new Context<>(findMemberById, requestMemberDto.getMemberId(), Optional.empty(), memberRepoFunc))
         );

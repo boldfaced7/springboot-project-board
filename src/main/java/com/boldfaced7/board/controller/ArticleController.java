@@ -8,6 +8,8 @@ import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +25,21 @@ public class ArticleController {
 
     private final ArticleService articleService;
 
-    @GetMapping("/articles")
-    public ResponseEntity<ArticleListResponse> getArticles() {
+    @GetMapping("/articles/{articleId}")
+    public ResponseEntity<ArticleResponse> getArticle(
+            @PathVariable Long articleId, Pageable pageable) {
 
-        List<ArticleDto> articles = articleService.getArticles();
+        ArticleDto dto = articleService.getArticle(new ArticleDto(articleId, pageable));
+        ArticleResponse response = new ArticleResponse(dto);
+
+        return ResponseEntity.ok()
+                .body(response);
+    }
+
+    @GetMapping("/articles")
+    public ResponseEntity<ArticleListResponse> getArticles(Pageable pageable) {
+
+        Page<ArticleDto> articles = articleService.getArticles(pageable);
         ArticleListResponse response = new ArticleListResponse(articles);
 
         return ResponseEntity.ok()
@@ -35,22 +48,11 @@ public class ArticleController {
 
     @GetMapping("/members/{memberId}/articles")
     public ResponseEntity<ArticleListResponse> getArticles(
-            @PathVariable Long memberId) {
+            @PathVariable Long memberId, Pageable pageable) {
 
-        MemberDto dto = new MemberDto(memberId);
-        List<ArticleDto> articles = articleService.getArticles(dto);
+        MemberDto dto = new MemberDto(memberId, pageable);
+        Page<ArticleDto> articles = articleService.getArticles(dto);
         ArticleListResponse response = new ArticleListResponse(articles);
-
-        return ResponseEntity.ok()
-                .body(response);
-    }
-
-    @GetMapping("/articles/{articleId}")
-    public ResponseEntity<ArticleResponse> getArticle(
-            @PathVariable Long articleId) {
-
-        ArticleDto dto = articleService.getArticle(articleId);
-        ArticleResponse response = new ArticleResponse(dto);
 
         return ResponseEntity.ok()
                 .body(response);

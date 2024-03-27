@@ -19,6 +19,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
@@ -76,10 +78,10 @@ class MemberControllerTest {
     }
     static Stream<Arguments> createGetMembersRequestTest() {
         Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(getMembers, List.of(createMemberDto()))
+                VALID, new Context<>(getMembers, PageRequest.of(0, 20), new PageImpl<>(List.of(createMemberDto())))
         );
-        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), ".members[0]");
-        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), ".members[0]");
+        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), ".members.content[0]");
+        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), ".members.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, doesNotExists, ok(), contentTypeJson()).flatMap(List::stream).toList();
 
         return Stream.of(

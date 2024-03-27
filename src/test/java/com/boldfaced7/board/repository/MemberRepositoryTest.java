@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -40,6 +42,8 @@ class MemberRepositoryTest {
     @Test
     void givenActiveMemberAndInactiveMember_whenSelecting_thenWorksFine() {
         //Given
+        PageRequest pageable = PageRequest.of(0, 0);
+
         Member member1 = createMember();
         memberRepository.save(member1);
 
@@ -48,12 +52,12 @@ class MemberRepositoryTest {
         member2.deactivate();
 
         // When
-        List<Member> activeMembers = memberRepository.findAll(true);
-        List<Member> inactiveMembers = memberRepository.findAll(false);
+        Page<Member> activeMembers = memberRepository.findAll(true, pageable);
+        Page<Member> inactiveMembers = memberRepository.findAll(false, pageable);
 
         // Then
-        assertThat(activeMembers.get(0)).isEqualTo(member1);
-        assertThat(inactiveMembers.get(0)).isEqualTo(member2);
+        assertThat(activeMembers.getContent().get(0)).isEqualTo(member1);
+        assertThat(inactiveMembers.getContent().get(0)).isEqualTo(member2);
     }
 
     @DisplayName("findById()가 해당하는 Member 객체를 반환하는지 확인")

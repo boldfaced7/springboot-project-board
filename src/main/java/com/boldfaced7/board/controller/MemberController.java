@@ -1,5 +1,6 @@
 package com.boldfaced7.board.controller;
 
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveMemberRequest;
 import com.boldfaced7.board.dto.request.UpdateMemberNicknameRequest;
@@ -8,14 +9,14 @@ import com.boldfaced7.board.dto.response.MemberListResponse;
 import com.boldfaced7.board.dto.response.MemberResponse;
 import com.boldfaced7.board.service.MemberService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 @RequestMapping("/api")
 @RestController
@@ -25,8 +26,9 @@ public class MemberController {
     private final MemberService memberService;
 
     @GetMapping("/members")
-    public ResponseEntity<MemberListResponse> getMembers(Pageable pageable) {
-        Page<MemberDto> members = memberService.getMembers(pageable);
+    public ResponseEntity<MemberListResponse> getMembers(
+            @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
+        CustomPage<MemberDto> members = memberService.getMembers(pageable);
         MemberListResponse response = new MemberListResponse(members);
 
         return ResponseEntity.ok()

@@ -118,6 +118,18 @@ public class TestUtil {
     /*
     DTO
      */
+
+    public static CustomPage<ArticleDto> createArticleDtoCustomPage() {
+        return new CustomPage<>(List.of(createArticleDto()), 0, 0, 1);
+    }
+    public static CustomPage<ArticleCommentDto> createArticleCommentDtoCustomPage() {
+        return new CustomPage<>(List.of(createArticleCommentDto()), 0, 0, 1);
+    }
+
+    public static CustomPage<MemberDto> createMemberDtoCustomPage() {
+        return new CustomPage<>(List.of(createMemberDto()), 0, 0, 1);
+    }
+
     public static MemberDto createMemberDto() {
         return MemberDto.builder()
                 .memberId(MEMBER_ID)
@@ -128,22 +140,6 @@ public class TestUtil {
                 .build();
     }
 
-    public static MemberDto createRequestMemberDto() {
-        return MemberDto.builder()
-                .email(EMAIL)
-                .password(PASSWORD)
-                .nickname(NICKNAME)
-                .build();
-    }
-
-    public static MemberDto createRequestMemberDto(Long memberId) {
-        return MemberDto.builder()
-                .email(EMAIL)
-                .memberId(memberId)
-                .password(PASSWORD)
-                .nickname(NICKNAME)
-                .build();
-    }
     public static ArticleDto createArticleDto() {
         return ArticleDto.builder()
                 .articleId(ARTICLE_ID)
@@ -155,7 +151,7 @@ public class TestUtil {
                 .modifiedAt(LocalDateTime.now())
                 .attachmentNames(List.of(STORED_NAME))
                 .attachmentUrls(List.of("/resources/attachments/" + STORED_NAME))
-                .articleComments(new PageImpl<>(List.of(createArticleCommentDto())))
+                .articleComments(createArticleCommentDtoCustomPage())
                 .build();
     }
 
@@ -177,12 +173,6 @@ public class TestUtil {
                 .build();
     }
 
-    public static ArticleCommentDto createArticleCommentDto(Long articleCommentId) {
-        return ArticleCommentDto.builder()
-                .articleCommentId(articleCommentId)
-                .build();
-    }
-
     public static AuthDto createRequestAuthDto() {
         return AuthDto.builder()
                 .memberId(MEMBER_ID)
@@ -196,69 +186,6 @@ public class TestUtil {
                 .memberId(MEMBER_ID)
                 .email(EMAIL)
                 .nickname(NICKNAME)
-                .build();
-    }
-
-    public static AttachmentDto createAttachmentDto() {
-        return AttachmentDto.builder()
-                .multipartFile(createMultipartFile())
-                .build();
-    }
-
-    /*
-    Request
-     */
-
-    public static SaveArticleRequest createSaveArticleRequest() {
-        return SaveArticleRequest.builder()
-                .title(TITLE)
-                .content(CONTENT)
-                .build();
-    }
-
-    public static UpdateArticleRequest createUpdateArticleRequest() {
-        return UpdateArticleRequest.builder()
-                .title(TITLE)
-                .content(CONTENT)
-                .build();
-    }
-
-    public static SaveArticleCommentRequest createSaveArticleCommentRequest() {
-        return SaveArticleCommentRequest.builder()
-                .content(CONTENT)
-                .build();
-    }
-
-    public static UpdateArticleCommentRequest createUpdateArticleCommentRequest() {
-        return UpdateArticleCommentRequest.builder()
-                .content(CONTENT)
-                .build();
-    }
-
-    public static SaveMemberRequest createSaveMemberRequest() {
-        return SaveMemberRequest.builder()
-                .email(EMAIL)
-                .password(PASSWORD)
-                .nickname(NICKNAME)
-                .build();
-    }
-
-    public static UpdateMemberNicknameRequest createUpdateMemberNicknameRequest() {
-        return UpdateMemberNicknameRequest.builder()
-                .nickname(NICKNAME)
-                .build();
-    }
-
-    public static UpdateMemberPasswordRequest createUpdateMemberPasswordRequest() {
-        return UpdateMemberPasswordRequest.builder()
-                .password(PASSWORD)
-                .build();
-    }
-
-    public static AuthRequest createAuthRequest() {
-        return AuthRequest.builder()
-                .email(EMAIL)
-                .password(PASSWORD)
                 .build();
     }
 

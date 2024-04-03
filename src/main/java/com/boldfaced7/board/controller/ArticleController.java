@@ -1,6 +1,7 @@
 package com.boldfaced7.board.controller;
 
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.UpdateArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleListResponse;
@@ -8,14 +9,14 @@ import com.boldfaced7.board.service.ArticleService;
 import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.boldfaced7.board.dto.response.ArticleResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 
 @RequestMapping("/api")
@@ -27,9 +28,10 @@ public class ArticleController {
 
     @GetMapping("/articles/{articleId}")
     public ResponseEntity<ArticleResponse> getArticle(
-            @PathVariable Long articleId, Pageable pageable) {
+            @PathVariable Long articleId,
+            @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable articleCommentPageable) {
 
-        ArticleDto dto = articleService.getArticle(new ArticleDto(articleId, pageable));
+        ArticleDto dto = articleService.getArticle(new ArticleDto(articleId, articleCommentPageable));
         ArticleResponse response = new ArticleResponse(dto);
 
         return ResponseEntity.ok()
@@ -37,9 +39,10 @@ public class ArticleController {
     }
 
     @GetMapping("/articles")
-    public ResponseEntity<ArticleListResponse> getArticles(Pageable pageable) {
+    public ResponseEntity<ArticleListResponse> getArticles(
+            @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<ArticleDto> articles = articleService.getArticles(pageable);
+        CustomPage<ArticleDto> articles = articleService.getArticles(pageable);
         ArticleListResponse response = new ArticleListResponse(articles);
 
         return ResponseEntity.ok()
@@ -48,10 +51,11 @@ public class ArticleController {
 
     @GetMapping("/members/{memberId}/articles")
     public ResponseEntity<ArticleListResponse> getArticles(
-            @PathVariable Long memberId, Pageable pageable) {
+            @PathVariable Long memberId,
+            @PageableDefault(sort = "id", direction = Sort.Direction.ASC) Pageable pageable) {
 
         MemberDto dto = new MemberDto(memberId, pageable);
-        Page<ArticleDto> articles = articleService.getArticles(dto);
+        CustomPage<ArticleDto> articles = articleService.getArticles(dto);
         ArticleListResponse response = new ArticleListResponse(articles);
 
         return ResponseEntity.ok()

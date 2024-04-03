@@ -2,12 +2,14 @@ package com.boldfaced7.board.service;
 
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,15 +35,11 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MemberDto> getMembers(Pageable pageable) {
-        return memberRepository.findAll(pageable)
-                .map(MemberDto::new);
-    }
+    public CustomPage<MemberDto> getMembers(Pageable pageable) {
+        Page<Member> members = memberRepository.findAll(pageable);
+        CustomPage<Member> converted = CustomPage.convert(members);
 
-    @Transactional(readOnly = true)
-    public Page<MemberDto> getMembers(MemberDto dto) {
-        return memberRepository.findAll(dto.isActive(), dto.getPageable())
-                .map(MemberDto::new);
+        return converted.map(MemberDto::new);
     }
 
     @Transactional(readOnly = true)

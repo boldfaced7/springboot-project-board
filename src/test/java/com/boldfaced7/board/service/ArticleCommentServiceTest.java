@@ -8,6 +8,7 @@ import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
@@ -26,7 +27,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -89,7 +89,7 @@ class ArticleCommentServiceTest {
     @DisplayName("댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsRequestTests")
-    void getArticleCommentsTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<Page<ArticleCommentDto>>> assertions) {
+    void getArticleCommentsTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<CustomPage<ArticleCommentDto>>> assertions) {
         testTemplate.performRequest(contexts, articleCommentService::getArticleComments, pageable, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsRequestTests() {
@@ -107,7 +107,7 @@ class ArticleCommentServiceTest {
     @DisplayName("게시글의 댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsOfArticleRequestTests")
-    void getArticleCommentsOfArticleTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleDto request, List<Assertion<Page<ArticleCommentDto>>> assertions) {
+    void getArticleCommentsOfArticleTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, ArticleDto request, List<Assertion<CustomPage<ArticleCommentDto>>> assertions) {
         testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsOfArticleRequestTests() {
@@ -135,7 +135,7 @@ class ArticleCommentServiceTest {
     @DisplayName("회원 작성 댓글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticleCommentsOfMemberRequestTests")
-    void getArticleCommentsOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Page<ArticleCommentDto>>> assertions) {
+    void getArticleCommentsOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<CustomPage<ArticleCommentDto>>> assertions) {
         testTemplate.performRequest(contexts, articleCommentService::getArticleComments, request, assertions);
     }
     static Stream<Arguments> createGetArticleCommentsOfMemberRequestTests() {

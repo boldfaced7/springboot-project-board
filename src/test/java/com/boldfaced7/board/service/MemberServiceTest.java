@@ -4,6 +4,7 @@ import com.boldfaced7.board.Assertion;
 import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
@@ -18,7 +19,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,8 +41,6 @@ class MemberServiceTest {
     @Mock private BCryptPasswordEncoder encoder;
     ServiceTestTemplate testTemplate;
 
-    static final String ACTIVE = "active";
-    static final String INACTIVE = "inactive";
     static final String FOUND = "found";
 
     @BeforeEach
@@ -126,7 +124,7 @@ class MemberServiceTest {
     @DisplayName("회원 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetMembersRequestTests")
-    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<Page<MemberDto>>> assertions) {
+    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<CustomPage<MemberDto>>> assertions) {
         testTemplate.performRequest(contexts, memberService::getMembers, pageable, assertions);
     }
     static Stream<Arguments> createGetMembersRequestTests() {

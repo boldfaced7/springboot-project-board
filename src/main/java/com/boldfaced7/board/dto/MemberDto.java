@@ -1,7 +1,6 @@
 package com.boldfaced7.board.dto;
 
 import com.boldfaced7.board.domain.Member;
-import com.boldfaced7.board.dto.response.AuthResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

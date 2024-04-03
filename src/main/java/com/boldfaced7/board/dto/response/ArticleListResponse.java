@@ -1,20 +1,16 @@
 package com.boldfaced7.board.dto.response;
 
 import com.boldfaced7.board.dto.ArticleDto;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.boldfaced7.board.dto.CustomPage;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.domain.Page;
-
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 public class ArticleListResponse {
-    private Page<ArticleResponse> articles;
+    private CustomPage<ArticleResponse> articles;
 
-    public ArticleListResponse(Page<ArticleDto> dtos) {
+    public ArticleListResponse(CustomPage<ArticleDto> dtos) {
         articles = dtos.map(this::toListResponse);
     }
 

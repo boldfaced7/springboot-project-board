@@ -3,10 +3,10 @@ package com.boldfaced7.board.dto;
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.domain.Member;
-import com.boldfaced7.board.dto.response.AuthResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class ArticleCommentDto {
     private Long articleCommentId;
     private Long articleId;

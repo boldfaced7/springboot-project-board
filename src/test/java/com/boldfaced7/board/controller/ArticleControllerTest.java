@@ -20,7 +20,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
@@ -80,7 +79,7 @@ class ArticleControllerTest {
     }
     static Stream<Arguments> createGetArticlesRequestTest() {
         Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticles, PageRequest.of(0, 20), new PageImpl<>(List.of(createArticleDto())))
+                VALID, new Context<>(getArticles, PageRequest.of(0, 20), createArticleDtoCustomPage())
         );
         List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
         List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
@@ -100,7 +99,7 @@ class ArticleControllerTest {
         MemberDto validMemberRequestDto = new MemberDto(MEMBER_ID, PageRequest.of(0, 20));
 
         Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticlesOfMember, validMemberRequestDto, new PageImpl<>(List.of(createArticleDto()))),
+                VALID, new Context<>(getArticlesOfMember, validMemberRequestDto, createArticleDtoCustomPage()),
                 NOT_FOUND, new Context<>(getArticlesOfMember, validMemberRequestDto, new MemberNotFoundException())
         );
         List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");

@@ -7,7 +7,9 @@ import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
@@ -80,6 +82,7 @@ class ArticleServiceTest {
         PageRequest pageable = PageRequest.of(0, 20);
         List<String> attachmentUrls = List.of("/resources/attachments/" + STORED_NAME);
         Page<ArticleComment> articleComments = new PageImpl<>(List.of(createArticleComment()));
+        CustomPage<ArticleCommentDto> articleCommentDtos = CustomPage.convert(articleComments).map(ArticleCommentDto::new);
 
         Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
                 VALID, List.of(
@@ -91,7 +94,7 @@ class ArticleServiceTest {
                 NOT_FOUND, List.of(new Context<>(findArticleById, ARTICLE_ID, Optional.empty(), articleRepoFunc))
         );
         Map<String, List<Assertion<ArticleDto>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(new ArticleDto(article, articleComments, attachmentUrls))),
+                VALID, List.of(new Assertion<>(new ArticleDto(article, articleCommentDtos, attachmentUrls))),
                 NOT_FOUND, List.of(new Assertion<>(ArticleNotFoundException.class))
         );
         ArticleDto validRequest = new ArticleDto(article.getId(), pageable);
@@ -104,7 +107,7 @@ class ArticleServiceTest {
     @DisplayName("게시글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticlesRequestTests")
-    void getArticlesTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<Page<ArticleDto>>> assertions) {
+    void getArticlesTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<CustomPage<ArticleDto>>> assertions) {
         testTemplate.performRequest(contexts, articleService::getArticles, pageable, assertions);
     }
     static Stream<Arguments> createGetArticlesRequestTests() {
@@ -120,7 +123,7 @@ class ArticleServiceTest {
     @DisplayName("회원 작성 게시글 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createGetArticlesOfMemberRequestTests")
-    void getArticlesOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Page<ArticleDto>>> assertions) {
+    void getArticlesOfMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<CustomPage<ArticleDto>>> assertions) {
         testTemplate.performRequest(contexts, articleService::getArticles, request, assertions);
     }
     static Stream<Arguments> createGetArticlesOfMemberRequestTests() {

@@ -25,21 +25,18 @@ public interface ArticleCommentRepository extends JpaRepository<ArticleComment, 
     @Query("select ac from ArticleComment ac" +
             " join fetch ac.article" +
             " join fetch ac.member" +
-            " where ac.isActive = true" +
-            " order by ac.id desc")
+            " where ac.isActive = true")
     public Page<ArticleComment> findAll(Pageable pageable);
 
     @Query("select ac from ArticleComment ac" +
             " join fetch ac.member" +
             " where ac.article = :article" +
-                " and ac.isActive = true" +
-            " order by ac.id desc")
+                " and ac.isActive = true")
     public Page<ArticleComment> findAllByArticle(@Param("article") Article article, Pageable pageable);
 
     @Query("select ac from ArticleComment ac" +
             " join fetch ac.article" +
             " where ac.member = :member" +
-                " and ac.isActive = true" +
-            " order by ac.id desc")
+                " and ac.isActive = true")
     public Page<ArticleComment> findAllByMember(@Param("member") Member member, Pageable pageable);
 }

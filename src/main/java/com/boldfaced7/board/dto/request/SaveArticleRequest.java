@@ -2,7 +2,6 @@ package com.boldfaced7.board.dto.request;
 
 import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.dto.ArticleDto;
-import com.boldfaced7.board.dto.AttachmentDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;

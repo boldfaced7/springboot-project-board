@@ -5,6 +5,7 @@ import com.boldfaced7.board.domain.Attachment;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class AttachmentDto {
     private Long attachmentId;
     private Long articleId;

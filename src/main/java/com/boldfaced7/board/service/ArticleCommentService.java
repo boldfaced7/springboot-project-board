@@ -6,6 +6,7 @@ import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
@@ -16,6 +17,10 @@ import com.boldfaced7.board.repository.ArticleCommentRepository;
 import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,34 +35,55 @@ public class ArticleCommentService {
     private final ArticleCommentRepository articleCommentRepository;
     private final MemberRepository memberRepository;
 
+    @Cacheable(value = "articleComments", key = "#pageable.pageNumber")
     @Transactional(readOnly = true)
-    public Page<ArticleCommentDto> getArticleComments(Pageable pageable) {
-        return articleCommentRepository.findAll(pageable).map(ArticleCommentDto::new);
+    public CustomPage<ArticleCommentDto> getArticleComments(Pageable pageable) {
+        Page<ArticleComment> articleComments = articleCommentRepository.findAll(pageable);
+        CustomPage<ArticleComment> converted = CustomPage.convert(articleComments);
+
+        return converted.map(ArticleCommentDto::new);
     }
 
+    @Cacheable(value = "articleCommentsOfArticle", key = "#articleDto.articleId", condition = "#articleDto.pageable.pageNumber == 0")
     @Transactional(readOnly = true)
-    public Page<ArticleCommentDto> getArticleComments(ArticleDto articleDto) {
+    public CustomPage<ArticleCommentDto> getArticleComments(ArticleDto articleDto) {
         Article article = findArticleById(articleDto.getArticleId());
         Pageable pageable = articleDto.getPageable();
 
-        return articleCommentRepository.findAllByArticle(article, pageable).map(ArticleCommentDto::new);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByArticle(article, pageable);
+        CustomPage<ArticleComment> converted = CustomPage.convert(articleComments);
+
+        return converted.map(ac -> new ArticleCommentDto(ac, article));
     }
 
+    @Cacheable(value = "articleCommentsOfMember", key = "#memberDto.memberId", condition = "memberDto.pageable.pageNumber == 0")
     @Transactional(readOnly = true)
-    public Page<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
+    public CustomPage<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
         Member member = findMemberById(memberDto.getMemberId());
         Pageable pageable = memberDto.getPageable();
 
-        return articleCommentRepository.findAllByMember(member, pageable).map(ArticleCommentDto::new);
+        Page<ArticleComment> articleComments = articleCommentRepository.findAllByMember(member, pageable);
+        CustomPage<ArticleComment> converted = CustomPage.convert(articleComments);
+
+        return converted.map(ac -> new ArticleCommentDto(ac, member));
     }
 
+    @Cacheable(value = "articleComment", key = "#articleCommentId")
     @Transactional(readOnly = true)
     public ArticleCommentDto getArticleComment(Long articleCommentId) {
         ArticleComment articleComment = findArticleCommentById(articleCommentId);
         return new ArticleCommentDto(articleComment);
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "article", key = "#dto.articleId"),
+                    @CacheEvict(value = "articleComments", allEntries = true),
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
+                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+            }
+    )
     public Long saveArticleComment(ArticleCommentDto dto) {
         Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
 
@@ -67,12 +93,28 @@ public class ArticleCommentService {
         return articleCommentRepository.save(dto.toEntityForSaving(article, member)).getId();
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId"),
+                    @CacheEvict(value = "articleComments", allEntries = true),
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
+                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+            }
+    )
     public void updateArticleComment(ArticleCommentDto dto) {
         ArticleComment articleComment = findArticleCommentById(dto.getArticleCommentId());
         authorizeAuthor(articleComment);
         articleComment.update(dto.toEntityForUpdating());
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId"),
+                    @CacheEvict(value = "articleComments", allEntries = true),
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
+                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+            }
+    )
     public void softDeleteArticleComment(ArticleCommentDto dto) {
         ArticleComment articleComment = findArticleCommentById(dto.getArticleCommentId());
         authorizeAuthor(articleComment);

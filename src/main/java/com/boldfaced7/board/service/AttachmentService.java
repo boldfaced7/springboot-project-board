@@ -13,11 +13,13 @@ import com.boldfaced7.board.repository.ArticleRepository;
 import com.boldfaced7.board.repository.AttachmentRepository;
 import com.boldfaced7.board.repository.filestore.FileStore;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -27,6 +29,7 @@ public class AttachmentService {
     private final AttachmentRepository attachmentRepository;
     private final FileStore fileStore;
 
+    @Cacheable(value = "attachment", key = "#attachmentId")
     @Transactional(readOnly = true)
     public AttachmentDto getAttachment(Long attachmentId) {
         Attachment attachment = findAttachmentById(attachmentId);
@@ -40,6 +43,7 @@ public class AttachmentService {
                 .toList();
     }
 
+    @Cacheable(value = "attachmentsOfArticle", key = "#articleDto.articleId")
     @Transactional(readOnly = true)
     public List<AttachmentDto> getAttachments(ArticleDto articleDto) {
         Article article = findArticleById(articleDto.getArticleId());
@@ -51,16 +55,29 @@ public class AttachmentService {
     public String saveAttachment(AttachmentDto dto) {
         return fileStore.storeFile(dto.getMultipartFile()).getStoredName();
     }
+
     public List<String> saveAttachments(List<AttachmentDto> dtos) {
         return dtos.stream().map(this::saveAttachment).toList();
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "attachment", key = "#dto.attachmentId"),
+                    @CacheEvict(value = "attachmentsOfArticle", key = "#dto.articleId")
+            }
+    )
     public void softDeleteAttachment(AttachmentDto dto) {
         Attachment attachment = findAttachmentById(dto.getAttachmentId());
         authorizeAuthor(attachment);
         attachment.deactivate();
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "attachment", key = "#dto.attachmentId"),
+                    @CacheEvict(value = "attachmentsOfArticle", key = "#dto.articleId")
+            }
+    )
     public void hardDeleteAttachment(AttachmentDto dto) {
         Attachment attachment = findAttachmentById(dto.getAttachmentId());
         authorizeAuthor(attachment);

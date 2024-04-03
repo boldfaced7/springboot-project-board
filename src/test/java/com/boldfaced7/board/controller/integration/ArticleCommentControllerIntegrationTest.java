@@ -1,19 +1,10 @@
 package com.boldfaced7.board.controller.integration;
 
-import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.SessionConst;
-import com.boldfaced7.board.controller.ArticleCommentController;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
 import com.boldfaced7.board.domain.ArticleComment;
-import com.boldfaced7.board.dto.ArticleCommentDto;
-import com.boldfaced7.board.dto.ArticleDto;
-import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveArticleCommentRequest;
 import com.boldfaced7.board.dto.request.UpdateArticleCommentRequest;
-import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
-import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
-import com.boldfaced7.board.error.exception.auth.ForbiddenException;
-import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.service.ArticleCommentService;
 import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,19 +14,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import static com.boldfaced7.board.ServiceMethod.*;
 import static com.boldfaced7.board.TestUtil.*;
 
 @DisplayName("ArticleCommentController 통합 테스트")

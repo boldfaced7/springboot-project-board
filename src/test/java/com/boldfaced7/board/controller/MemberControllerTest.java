@@ -1,16 +1,17 @@
 package com.boldfaced7.board.controller;
 
-import com.boldfaced7.board.Context;
+import com.boldfaced7.board.Mocker;
 import com.boldfaced7.board.auth.SessionConst;
-import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveMemberRequest;
 import com.boldfaced7.board.dto.request.UpdateMemberNicknameRequest;
 import com.boldfaced7.board.dto.request.UpdateMemberPasswordRequest;
-import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
+import com.boldfaced7.board.dto.response.MemberListResponse;
+import com.boldfaced7.board.dto.response.MemberResponse;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.service.MemberService;
-import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,24 +20,21 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static com.boldfaced7.board.ServiceMethod.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("MemberController 테스트")
 @WebMvcTest({MemberController.class})
 class MemberControllerTest {
 
     @Autowired MockMvc mvc;
-    @Autowired Gson gson;
     @MockBean MemberService memberService;
     ControllerTestTemplate<MemberService> testTemplate;
     MockHttpSession session;
@@ -44,140 +42,126 @@ class MemberControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
-        testTemplate = new ControllerTestTemplate<>(mvc, gson, session, memberService);
+        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        testTemplate = new ControllerTestTemplate<>(mvc, session, memberService);
     }
 
     @DisplayName("[GET] 회원 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetMemberRequestTests")
-    void GetMemberTest(String ignoredMessage, Context<MemberService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, memberUrl(MEMBER_ID), resultMatchers);
+    @MethodSource
+    <T> void getMemberTest(Mocker<MemberService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, memberUrl(1L), status, response);
     }
-    static Stream<Arguments> createGetMemberRequestTests() {
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(getMember, MEMBER_ID, createMemberDto()),
-                NOT_FOUND, new Context<>(getMember, MEMBER_ID, new MemberNotFoundException())
-        );
-        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), "");
-        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), "");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, doesNotExists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+    static Stream<Arguments> getMemberTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        MemberDto dto = memberDto();
+        valid.mocks(m -> m.getMember(any()), dto);
+
+        Mocker<MemberService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 회원");
+        notFound.mocksFunction(m -> m.getMember(any()), MemberNotFoundException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("존재하지 않는 회원", contexts.get(NOT_FOUND), notFound())
+                Arguments.of(valid, OK, new MemberResponse(dto)),
+                Arguments.of(notFound, NOT_FOUND, null)
         );
     }
 
     @DisplayName("[GET] 회원 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetMembersRequestTest")
-    void GetMembersTest(String ignoredMessage, Context<MemberService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, memberUrl(), resultMatchers);
+    @MethodSource
+    <T> void getMembersTest(Mocker<MemberService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, memberUrl(), status, response);
     }
-    static Stream<Arguments> createGetMembersRequestTest() {
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(getMembers, PageRequest.of(0, 20), createMemberDtoCustomPage())
-        );
-        List<ResultMatcher> exists = exists(List.of("memberId", "email", "nickname"), ".members.content[0]");
-        List<ResultMatcher> doesNotExists = doesNotExists(List.of("password"), ".members.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, doesNotExists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+    static Stream<Arguments> getMembersTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        CustomPage<MemberDto> page = memberDtos();
+        valid.mocks(m -> m.getMembers(any(Pageable.class)), page);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers)
+                Arguments.of(valid, OK, new MemberListResponse(page))
         );
     }
 
     @DisplayName("[POST] 회원 등록")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPostRequestTests")
-    <T> void PostMemberTest(String ignoredMessage, Context<MemberService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPost(context, signUpUrl(), request, resultMatchers);
+    @MethodSource
+    void postMemberTest(Mocker<MemberService> mock, String email, String password, String nickname, ResultMatcher status) throws Exception {
+        testTemplate.doPost(mock, signUpUrl(), new SaveMemberRequest(email, password, nickname), status);
     }
-    static Stream<Arguments> createPostRequestTests() {
-        SaveMemberRequest validRequest = new SaveMemberRequest(EMAIL, PASSWORD, NICKNAME);
-        MemberDto validRequestDto = validRequest.toDto();
+    static Stream<Arguments> postMemberTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        valid.mocks(m -> m.saveMember(any()), 1L);
 
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(saveMember, validRequestDto, MEMBER_ID)
-        );
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, created()),
-                Arguments.of("비정상 호출: 이메일 형식 오류", null, new SaveMemberRequest("a", PASSWORD, NICKNAME), badRequest()),
-                Arguments.of("비정상 호출: 이메일 누락", null, new SaveMemberRequest("", PASSWORD, NICKNAME), badRequest()),
-                Arguments.of("비정상 호출: 비밀번호 누락", null, new SaveMemberRequest(EMAIL, "", NICKNAME), badRequest()),
-                Arguments.of("비정상 호출: 닉네임 누락", null, new SaveMemberRequest(EMAIL, PASSWORD, ""), badRequest()),
-                Arguments.of("비정상 호출: 이메일 길이 초과", null, new SaveMemberRequest("a".repeat(Member.MAX_EMAIL_LENGTH + 1), PASSWORD, NICKNAME), badRequest()),
-                Arguments.of("비정상 호출: 비밀번호 길이 초과", null, new SaveMemberRequest(EMAIL, "a".repeat(Member.MAX_PASSWORD_LENGTH + 1), NICKNAME), badRequest()),
-                Arguments.of("비정상 호출: 닉네임 길이 초과", null, new SaveMemberRequest(EMAIL, PASSWORD, "a".repeat(Member.MAX_NICKNAME_LENGTH + 1)), badRequest())
+                Arguments.of(valid, EMAIL, PASSWORD, NICKNAME, CREATED),
+                Arguments.of(new Mocker<>("비정상 호출: 이메일 형식 오류"), "a", PASSWORD, NICKNAME, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 이메일 누락"), "", PASSWORD, NICKNAME, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 비밀번호 누락"), EMAIL, "", NICKNAME, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 닉네임 누락"), EMAIL, PASSWORD, "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 이메일 길이 초과"), EXCEEDED_EMAIL, PASSWORD, NICKNAME, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 비밀번호 길이 초과"), EMAIL, EXCEEDED_PASSWORD, NICKNAME, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 닉네임 길이 초과"), EMAIL, PASSWORD, EXCEEDED_NICKNAME, BAD_REQUEST)
         );
     }
+
     @DisplayName("[PATCH] 회원 닉네임 수정")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPatchNicknameRequestTests")
-    <T> void PatchMemberNicknameTest(String ignoredMessage, Context<MemberService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPatch(context, memberNicknameUrl(MEMBER_ID), request, resultMatchers);
+    @MethodSource
+    void patchMemberNicknameTest(Mocker<MemberService> mock, String nickname, ResultMatcher status) throws Exception {
+        testTemplate.doPatch(mock, memberNicknameUrl(1L), new UpdateMemberNicknameRequest(nickname), status);
     }
-    static Stream<Arguments> createPatchNicknameRequestTests() {
-        UpdateMemberNicknameRequest validRequest = new UpdateMemberNicknameRequest(NICKNAME);
-        MemberDto validRequestDto = validRequest.toDto(MEMBER_ID);
+    static Stream<Arguments> patchMemberNicknameTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        valid.mocks(m -> m.updateMember(any()));
 
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(updateMemberNickname, validRequestDto),
-                NOT_FOUND, new Context<>(updateMemberNickname, validRequestDto, new MemberNotFoundException()),
-                FORBIDDEN, new Context<>(updateMemberNickname, validRequestDto, new ForbiddenException())
-        );
+        Mocker<MemberService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(m -> m.updateMember(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 회원", contexts.get(NOT_FOUND), validRequest, notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), validRequest, forbidden()),
-                Arguments.of("비정상 호출: 닉네임 누락", null, new UpdateMemberNicknameRequest(""), badRequest()),
-                Arguments.of("비정상 호출: 닉네임 길이 초과", null, new UpdateMemberNicknameRequest("a".repeat(Member.MAX_NICKNAME_LENGTH + 1)), badRequest())
+                Arguments.of(valid, NICKNAME, OK),
+                Arguments.of(forbidden, NICKNAME, FORBIDDEN),
+                Arguments.of(new Mocker<>("비정상 호출: 닉네임 누락"), "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 닉네임 길이 초과"), EXCEEDED_NICKNAME, BAD_REQUEST)
         );
     }
 
     @DisplayName("[PATCH] 회원 비밀번호 수정")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPatchPasswordRequestTests")
-    <T> void PatchMemberPasswordTest(String ignoredMessage, Context<MemberService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPatch(context, memberPasswordUrl(MEMBER_ID), request, resultMatchers);
+    @MethodSource
+    void patchMemberPasswordTest(Mocker<MemberService> mock, String password, ResultMatcher status) throws Exception {
+        testTemplate.doPatch(mock, memberPasswordUrl(1L), new UpdateMemberPasswordRequest(password), status);
     }
-    static Stream<Arguments> createPatchPasswordRequestTests() {
-        UpdateMemberPasswordRequest validRequest = new UpdateMemberPasswordRequest(PASSWORD);
-        MemberDto validRequestDto = validRequest.toDto(MEMBER_ID);
+    static Stream<Arguments> patchMemberPasswordTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        valid.mocks(m -> m.updateMember(any()));
 
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(updateMemberPassword, validRequestDto),
-                NOT_FOUND, new Context<>(updateMemberPassword, validRequestDto, new MemberNotFoundException()),
-                FORBIDDEN, new Context<>(updateMemberPassword, validRequestDto, new ForbiddenException())
-        );
+        Mocker<MemberService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(m -> m.updateMember(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 회원", contexts.get(NOT_FOUND), validRequest, notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), validRequest, forbidden()),
-                Arguments.of("비정상 호출: 비밀번호 누락", null, new UpdateMemberPasswordRequest(""), badRequest()),
-                Arguments.of("비정상 호출: 비밀번호 길이 초과", null, new UpdateMemberPasswordRequest("a".repeat(Member.MAX_EMAIL_LENGTH + 1)), badRequest())
+                Arguments.of(valid, PASSWORD, OK),
+                Arguments.of(forbidden, PASSWORD, FORBIDDEN),
+                Arguments.of(new Mocker<>("비정상 호출: 비밀번호 누락"), "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 비밀번호 길이 초과"), EXCEEDED_PASSWORD, BAD_REQUEST)
         );
     }
 
     @DisplayName("[DELETE] 회원 삭제")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createDeleteRequestTests")
-    void DeleteMemberTest(String ignoredMessage, Context<MemberService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doDelete(context, memberUrl(MEMBER_ID), resultMatchers);
+    @MethodSource
+    void deleteMemberTest(Mocker<MemberService> mock, ResultMatcher status) throws Exception {
+        testTemplate.doDelete(mock, memberUrl(1L), status);
     }
-    static Stream<Arguments> createDeleteRequestTests() {
-        MemberDto validMemberDto = MemberDto.builder().memberId(MEMBER_ID).build();
+    static Stream<Arguments> deleteMemberTest() {
+        Mocker<MemberService> valid = new Mocker<>("정상 호출");
+        valid.mocks(m -> m.softDeleteMember(any()));
 
-        Map<String, Context<MemberService>> contexts = Map.of(
-                VALID, new Context<>(softDeleteMember, validMemberDto),
-                NOT_FOUND, new Context<>(softDeleteMember, validMemberDto, new MemberNotFoundException()),
-                FORBIDDEN, new Context<>(softDeleteMember, validMemberDto, new ForbiddenException())
-        );
+        Mocker<MemberService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(m -> m.softDeleteMember(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 회원", contexts.get(NOT_FOUND), notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), forbidden())
+                Arguments.of(valid, OK),
+                Arguments.of(forbidden, FORBIDDEN)
         );
     }
 }

@@ -1,19 +1,19 @@
 package com.boldfaced7.board.controller;
 
-import com.boldfaced7.board.Context;
+import com.boldfaced7.board.Mocker;
 import com.boldfaced7.board.auth.SessionConst;
-import com.boldfaced7.board.domain.ArticleComment;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveArticleCommentRequest;
 import com.boldfaced7.board.dto.request.UpdateArticleCommentRequest;
+import com.boldfaced7.board.dto.response.ArticleCommentListResponse;
+import com.boldfaced7.board.dto.response.ArticleCommentResponse;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.error.exception.articlecomment.ArticleCommentNotFoundException;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
-import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.service.ArticleCommentService;
-import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,24 +22,21 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static com.boldfaced7.board.ServiceMethod.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("ArticleCommentController 테스트")
 @WebMvcTest({ArticleCommentController.class})
 class ArticleCommentControllerTest {
 
     @Autowired MockMvc mvc;
-    @Autowired Gson gson;
     @MockBean ArticleCommentService articleCommentService;
     ControllerTestTemplate<ArticleCommentService> testTemplate;
     MockHttpSession session;
@@ -47,157 +44,146 @@ class ArticleCommentControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
-        testTemplate = new ControllerTestTemplate<>(mvc, gson, session, articleCommentService);
+        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        testTemplate = new ControllerTestTemplate<>(mvc, session, articleCommentService);
     }
-
 
     @DisplayName("[GET] 댓글 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticleCommentRequestTests")
-    void GetArticleCommentTest(String ignoredMessage, Context<ArticleCommentService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, articleArticleCommentUrl(ARTICLE_ID, ARTICLE_COMMENT_ID), resultMatchers);
+    @MethodSource
+    <T> void getArticleCommentTest(Mocker<ArticleCommentService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, articleArticleCommentUrl(1L, 1L), status, response);
     }
-    static Stream<Arguments> createGetArticleCommentRequestTests() {
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleComment, ARTICLE_COMMENT_ID, createArticleCommentDto()),
-                NOT_FOUND, new Context<>(getArticleComment, ARTICLE_COMMENT_ID, new ArticleCommentNotFoundException())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleId", "articleCommentId", "content", "author"), "");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+    static Stream<Arguments> getArticleCommentTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        ArticleCommentDto dto = articleCommentDto();
+        valid.mocks(a -> a.getArticleComment(any()), dto);
+
+        Mocker<ArticleCommentService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 댓글");
+        notFound.mocksFunction(a -> a.getArticleComment(any()), ArticleCommentNotFoundException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("비정상 호출: 존재하지 않는 댓글", contexts.get(NOT_FOUND), notFound())
+                Arguments.of(valid, OK, new ArticleCommentResponse(dto)),
+                Arguments.of(notFound, NOT_FOUND, null)
         );
     }
 
     @DisplayName("[GET] 댓글 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticleCommentsRequestTest")
-    void GetArticleCommentsTest(String ignoredMessage, Context<ArticleCommentService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, articleCommentUrl(), resultMatchers);
+    @MethodSource
+    <T> void getArticleCommentsTest(Mocker<ArticleCommentService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, articleCommentUrl(), status, response);
     }
-    static Stream<Arguments> createGetArticleCommentsRequestTest() {
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleComments, PageRequest.of(0, 20), createArticleCommentDtoCustomPage())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+    static Stream<Arguments> getArticleCommentsTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        CustomPage<ArticleCommentDto> page = articleCommentDtos();
+        valid.mocks(a -> a.getArticleComments(any(Pageable.class)), page);
 
-        return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers)
-        );
+        return Stream.of(Arguments.of(valid, OK, new ArticleCommentListResponse(page)));
     }
 
     @DisplayName("[GET] 게시글의 댓글 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticleCommentsOfArticleRequestTest")
-    void GetArticleCommentsOfArticleTest(String ignoredMessage, Context<ArticleCommentService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, articleArticleCommentUrl(ARTICLE_ID), resultMatchers);
+    @MethodSource
+    <T> void getArticleCommentsOfArticleTest(Mocker<ArticleCommentService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, articleArticleCommentUrl(1L), status, response);
     }
-    static Stream<Arguments> createGetArticleCommentsOfArticleRequestTest() {
-        ArticleDto validArticleDto = new ArticleDto(ARTICLE_ID, PageRequest.of(0, 20));
+    static Stream<Arguments> getArticleCommentsOfArticleTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        CustomPage<ArticleCommentDto> page = articleCommentDtos();
+        valid.mocks(a -> a.getArticleComments(any(ArticleDto.class)), page);
 
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleCommentsOfArticle, validArticleDto, createArticleCommentDtoCustomPage()),
-                NOT_FOUND, new Context<>(getArticleCommentsOfArticle, validArticleDto, new ArticleNotFoundException())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+        Mocker<ArticleCommentService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 게시글");
+        notFound.mocksFunction(a -> a.getArticleComments(any(ArticleDto.class)), ArticleNotFoundException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("비정상 호출: 존재하지 않는 게시글", contexts.get(NOT_FOUND), notFound())
+                Arguments.of(valid, OK, new ArticleCommentListResponse(page)),
+                Arguments.of(notFound, NOT_FOUND, null)
         );
     }
 
     @DisplayName("[GET] 회원 작성 댓글 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticleCommentsOfMemberRequestTest")
-    void GetArticleCommentsOfMemberTest(String ignoredMessage, Context<ArticleCommentService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, memberArticleCommentUrl(MEMBER_ID), resultMatchers);
+    @MethodSource
+    <T> void getArticleCommentsOfMemberTest(Mocker<ArticleCommentService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, memberArticleCommentUrl(1L), status, response);
     }
-    static Stream<Arguments> createGetArticleCommentsOfMemberRequestTest() {
-        MemberDto validMemberDto = new MemberDto(MEMBER_ID, PageRequest.of(0, 20));
+    static Stream<Arguments> getArticleCommentsOfMemberTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        CustomPage<ArticleCommentDto> page = articleCommentDtos();
+        valid.mocks(a -> a.getArticleComments(any(MemberDto.class)), page);
 
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(getArticleCommentsOfMember, validMemberDto, createArticleCommentDtoCustomPage()),
-                NOT_FOUND, new Context<>(getArticleCommentsOfMember, validMemberDto, new MemberNotFoundException()),
-                FORBIDDEN, new Context<>(getArticleCommentsOfMember, validMemberDto, new ForbiddenException())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleCommentId", "content", "author"), ".articleComments.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+        Mocker<ArticleCommentService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksFunction(a -> a.getArticleComments(any(MemberDto.class)), ForbiddenException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("비정상 호출: 존재하지 않는 회원", contexts.get(NOT_FOUND), notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), forbidden())
+                Arguments.of(valid, OK, new ArticleCommentListResponse(page)),
+                Arguments.of(forbidden, FORBIDDEN, null)
         );
     }
 
     @DisplayName("[POST] 댓글 등록")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPostRequestTests")
-    <T> void PostArticleCommentTest(String ignoredMessage, Context<ArticleCommentService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPost(context, articleArticleCommentUrl(ARTICLE_ID), request, resultMatchers);
+    @MethodSource
+    void postArticleCommentTest(Mocker<ArticleCommentService> mock, String content, ResultMatcher status) throws Exception {
+        testTemplate.doPost(mock, articleArticleCommentUrl(1L), new SaveArticleCommentRequest(content), status);
     }
-    static Stream<Arguments> createPostRequestTests() {
-        SaveArticleCommentRequest validRequest = new SaveArticleCommentRequest(CONTENT);
-        ArticleCommentDto validRequestDto = validRequest.toDto(ARTICLE_ID);
+    static Stream<Arguments> postArticleCommentTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.saveArticleComment(any()), 1L);
 
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(saveArticleComment, validRequestDto, ARTICLE_COMMENT_ID)
-        );
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, created()),
-                Arguments.of("비정상 호출: 내용 누락", null, new SaveArticleCommentRequest(""), badRequest()),
-                Arguments.of("비정상 호출: 내용 길이 초과", null, new SaveArticleCommentRequest("a".repeat(ArticleComment.MAX_CONTENT_LENGTH + 1)), badRequest())
+                Arguments.of(valid, CONTENT, CREATED),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 누락"), "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 길이 초과"), EXCEEDED_COMMENT_CONTENT, BAD_REQUEST)
         );
     }
 
     @DisplayName("[PATCH] 댓글 수정")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPatchRequestTests")
-    <T> void PatchArticleCommentTest(String ignoredMessage, Context<ArticleCommentService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPatch(context, articleArticleCommentUrl(ARTICLE_ID, ARTICLE_COMMENT_ID), request, resultMatchers);
+    @MethodSource
+    void patchArticleCommentTest(Mocker<ArticleCommentService> mock, String content, ResultMatcher status) throws Exception {
+        testTemplate.doPatch(mock, articleArticleCommentUrl(1L, 1L), new UpdateArticleCommentRequest(content), status);
     }
-    static Stream<Arguments> createPatchRequestTests() {
-        UpdateArticleCommentRequest validRequest = new UpdateArticleCommentRequest(CONTENT);
-        ArticleCommentDto validRequestDto = validRequest.toDto(ARTICLE_COMMENT_ID);
+    static Stream<Arguments> patchArticleCommentTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.updateArticleComment(any()));
 
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(updateArticleComment, validRequestDto),
-                NOT_FOUND, new Context<>(updateArticleComment, validRequestDto, new ArticleCommentNotFoundException()),
-                FORBIDDEN, new Context<>(updateArticleComment, validRequestDto, new ForbiddenException())
-        );
+        Mocker<ArticleCommentService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 댓글");
+        notFound.mocksConsumer(a -> a.updateArticleComment(any()), ArticleCommentNotFoundException.class);
+
+        Mocker<ArticleCommentService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(a -> a.updateArticleComment(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 댓글", contexts.get(NOT_FOUND), validRequest, notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), validRequest, forbidden()),
-                Arguments.of("비정상 호출: 내용 누락", null, new UpdateArticleCommentRequest(""), badRequest()),
-                Arguments.of("비정상 호출: 내용 길이 초과", null, new UpdateArticleCommentRequest("a".repeat(ArticleComment.MAX_CONTENT_LENGTH + 1)), badRequest())
+                Arguments.of(valid, CONTENT, OK),
+                Arguments.of(notFound, CONTENT, NOT_FOUND),
+                Arguments.of(forbidden, CONTENT, FORBIDDEN),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 누락"), "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 길이 초과"), EXCEEDED_COMMENT_CONTENT, BAD_REQUEST)
         );
     }
 
     @DisplayName("[DELETE] 댓글 삭제")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createDeleteRequestTests")
-    void DeleteArticleCommentTest(String ignoredMessage, Context<ArticleCommentService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doDelete(context, articleArticleCommentUrl(ARTICLE_ID,ARTICLE_COMMENT_ID), resultMatchers);
+    @MethodSource
+    void deleteArticleCommentTest(Mocker<ArticleCommentService> mock, ResultMatcher status) throws Exception {
+        testTemplate.doDelete(mock, articleArticleCommentUrl(1L, 1L), status);
     }
-    static Stream<Arguments> createDeleteRequestTests() {
-        ArticleCommentDto validArticleCommentDto = ArticleCommentDto.builder().articleCommentId(ARTICLE_COMMENT_ID).build();
+    static Stream<Arguments> deleteArticleCommentTest() {
+        Mocker<ArticleCommentService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.softDeleteArticleComment(any()));
 
-        Map<String, Context<ArticleCommentService>> contexts = Map.of(
-                VALID, new Context<>(softDeleteArticleComment, validArticleCommentDto),
-                NOT_FOUND, new Context<>(softDeleteArticleComment, validArticleCommentDto, new ArticleCommentNotFoundException()),
-                FORBIDDEN, new Context<>(softDeleteArticleComment, validArticleCommentDto, new ForbiddenException())
-        );
+        Mocker<ArticleCommentService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 댓글");
+        notFound.mocksConsumer(a -> a.softDeleteArticleComment(any()), ArticleCommentNotFoundException.class);
+
+        Mocker<ArticleCommentService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(a -> a.softDeleteArticleComment(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 댓글", contexts.get(NOT_FOUND), notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), forbidden())
+                Arguments.of(valid, OK),
+                Arguments.of(notFound, NOT_FOUND),
+                Arguments.of(forbidden, FORBIDDEN)
         );
     }
 }

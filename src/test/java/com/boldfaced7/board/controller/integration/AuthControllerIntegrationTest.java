@@ -2,10 +2,8 @@ package com.boldfaced7.board.controller.integration;
 
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
-import com.boldfaced7.board.domain.Member;
 import com.boldfaced7.board.dto.request.AuthRequest;
 import com.boldfaced7.board.service.AuthService;
-import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,7 +16,6 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
@@ -28,9 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
-
     @Autowired MockMvc mvc;
-    @Autowired Gson gson;
     @Autowired AuthService authService;
     ControllerTestTemplate<AuthService> testTemplate;
     MockHttpSession session;
@@ -38,39 +33,41 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
-        testTemplate = new ControllerTestTemplate<>(mvc, gson, session, authService);
+        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        testTemplate = new ControllerTestTemplate<>(mvc, session, authService);
     }
 
     @DisplayName("[API][POST] 로그인")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createLoginRequestTests")
-    void loginTest(String ignoredMessage, AuthRequest request, List<ResultMatcher> resultMatchers) throws Exception {
+    void loginTest(String ignoredMessage, String email, String password, ResultMatcher status) throws Exception {
         session.invalidate();
-        testTemplate.doPost(null, loginUrl(), request, resultMatchers);
+        testTemplate.doPost(loginUrl(), new AuthRequest(email, password), status);
     }
     static Stream<Arguments> createLoginRequestTests() {
         return Stream.of(
-                Arguments.of("정상 호출", new AuthRequest(EMAIL, PASSWORD), ok()),
-                Arguments.of("비정상 호출: 이메일 불일치", new AuthRequest("wrong" + EMAIL, PASSWORD), unauthorized()),
-                Arguments.of("비정상 호출: 비밀번호 불일치", new AuthRequest(EMAIL, "wrong" + PASSWORD), unauthorized()),
-                Arguments.of("비정상 호출: 이메일 형식 불일치",  new AuthRequest("a", PASSWORD), badRequest()),
-                Arguments.of("비정상 호출: 이메일 길이 초과",  new AuthRequest("a".repeat(Member.MAX_EMAIL_LENGTH + 1), PASSWORD), badRequest()),
-                Arguments.of("비정상 호출: 비밀번호 길이 초과",  new AuthRequest(EMAIL, "a".repeat(Member.MAX_PASSWORD_LENGTH + 1)), badRequest())
+                Arguments.of("정상 호출", EMAIL, PASSWORD, OK),
+                Arguments.of("비정상 호출: 이메일 불일치", "wrong" + EMAIL, PASSWORD, UNAUTHORIZED),
+                Arguments.of("비정상 호출: 비밀번호 불일치", EMAIL, "wrong" + PASSWORD, UNAUTHORIZED),
+                Arguments.of("비정상 호출: 이메일 누락", "", PASSWORD, BAD_REQUEST),
+                Arguments.of("비정상 호출: 비밀번호 누락", EMAIL, "", BAD_REQUEST),
+                Arguments.of("비정상 호출: 이메일 길이 초과",  EXCEEDED_EMAIL, PASSWORD, BAD_REQUEST),
+                Arguments.of("비정상 호출: 비밀번호 길이 초과",  EMAIL, EXCEEDED_PASSWORD, BAD_REQUEST),
+                Arguments.of("비정상 호출: 이메일 형식 불일치",  "a", PASSWORD, BAD_REQUEST)
         );
     }
 
     @DisplayName("[API][GET] 로그아웃")
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createLogoutRequestTests")
-    void logoutTest(String ignoredMessage, List<ResultMatcher> resultMatchers) throws Exception {
+    void logoutTest(String ignoredMessage, ResultMatcher status) throws Exception {
         assertThat(session.isInvalid()).isFalse();
-        testTemplate.doGet(null, logoutUrl(), resultMatchers);
+        testTemplate.doGet(logoutUrl(), status);
         assertThat(session.isInvalid()).isTrue();
     }
     static Stream<Arguments> createLogoutRequestTests() {
         return Stream.of(
-                Arguments.of("정상 호출", ok())
+                Arguments.of("정상 호출", OK)
         );
     }
 }

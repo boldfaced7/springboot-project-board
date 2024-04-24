@@ -29,9 +29,4 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
             " where a.member = :member" +
                 " and a.isActive = true")
     public Page<Article> findAllByMember(@Param("member") Member member, Pageable pageable);
-
-    @Query("select a from Article a" +
-            " where a.member.id = :memberId" +
-            " and a.isActive = true")
-    public Page<Article> findAllByMember(@Param("memberId") Long memberId, Pageable pageable);
 }

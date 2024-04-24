@@ -56,7 +56,7 @@ public class ArticleCommentService {
         return converted.map(ac -> new ArticleCommentDto(ac, article));
     }
 
-    @Cacheable(value = "articleCommentsOfMember", key = "#memberDto.memberId", condition = "memberDto.pageable.pageNumber == 0")
+    @Cacheable(value = "articleCommentsOfMember", key = "#memberDto.memberId", condition = "#memberDto.pageable.pageNumber == 0")
     @Transactional(readOnly = true)
     public CustomPage<ArticleCommentDto> getArticleComments(MemberDto memberDto) {
         authorizeMember(memberDto.getMemberId());
@@ -78,10 +78,10 @@ public class ArticleCommentService {
 
     @Caching(
             evict = {
-                    @CacheEvict(value = "article", key = "#dto.articleId"),
+                    @CacheEvict(value = "article", key = "#dto.articleId", condition = "#dto.articleId != null"),
                     @CacheEvict(value = "articleComments", allEntries = true),
-                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
-                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId", condition = "#dto.articleId != null"),
+                    @CacheEvict(value = "articleCommentsOfMember", key = "#authInfoHolder.authInfo.memberId", condition = "#authInfoHolder != null")
             }
     )
     public Long saveArticleComment(ArticleCommentDto dto) {
@@ -95,10 +95,10 @@ public class ArticleCommentService {
 
     @Caching(
             evict = {
-                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId"),
+                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId", condition = "#dto.articleCommentId != null"),
                     @CacheEvict(value = "articleComments", allEntries = true),
-                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
-                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId", condition = "#dto.articleId != null"),
+                    @CacheEvict(value = "articleCommentsOfMember", key = "#authInfoHolder.authInfo.memberId", condition = "#authInfoHolder != null")
             }
     )
     public void updateArticleComment(ArticleCommentDto dto) {
@@ -109,10 +109,10 @@ public class ArticleCommentService {
 
     @Caching(
             evict = {
-                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId"),
+                    @CacheEvict(value = "articleComment", key = "#dto.articleCommentId", condition = "#dto.articleCommentId != null"),
                     @CacheEvict(value = "articleComments", allEntries = true),
-                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId"),
-                    @CacheEvict(value = "articleCommentsofMember", key = "#authInfoHolder.authInfo.memberId")
+                    @CacheEvict(value = "articleCommentsOfArticle", key = "#dto.articleId", condition = "#dto.articleId != null"),
+                    @CacheEvict(value = "articleCommentsOfMember", key = "#authInfoHolder.authInfo.memberId", condition = "#authInfoHolder != null")
             }
     )
     public void softDeleteArticleComment(ArticleCommentDto dto) {

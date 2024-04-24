@@ -82,7 +82,7 @@ public class ArticleService {
 
     @Caching(evict = {
             @CacheEvict(value = "articles", allEntries = true),
-            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId")
+            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId", condition = "#dto.memberId != null")
     })
     public Long saveArticle(ArticleDto dto) {
         Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
@@ -97,9 +97,9 @@ public class ArticleService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "article", key = "#dto.articleId"),
+            @CacheEvict(value = "article", key = "#dto.articleId", condition = "#dto.articleId != null"),
             @CacheEvict(value = "articles", allEntries = true),
-            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId")
+            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId", condition = "#dto.memberId != null")
     })
     public void updateArticle(ArticleDto dto) {
         Article article = findArticleById(dto.getArticleId());
@@ -112,9 +112,9 @@ public class ArticleService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "article", key = "#dto.articleId"),
+            @CacheEvict(value = "article", key = "#dto.articleId", condition = "#dto.articleId != null"),
             @CacheEvict(value = "articles", allEntries = true),
-            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId")
+            @CacheEvict(value = "articlesOfMember", key = "#dto.memberId", condition = "#dto.memberId != null")
     })
     public void softDeleteArticle(ArticleDto dto) {
         Article article = findArticleById(dto.getArticleId());

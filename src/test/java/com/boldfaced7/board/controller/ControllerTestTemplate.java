@@ -1,8 +1,9 @@
 package com.boldfaced7.board.controller;
 
-import com.boldfaced7.board.Context;
-import com.boldfaced7.board.GivenAndThen;
-import com.google.gson.Gson;
+import com.boldfaced7.board.Mocker;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
@@ -13,88 +14,123 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ControllerTestTemplate<S> {
+    private final ObjectMapper objectMapper = objectMapper();
     MockMvc mvc;
-    Gson gson;
     MockHttpSession session;
-    S service;
+    S mockedElement;
 
-    public void doMultipart(Context<S> context, String url, List<MockMultipartFile> files, List<ResultMatcher> resultMatchers) throws Exception {
+    public ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .registerModule(new JavaTimeModule());
 
-        GivenAndThen givenAndThen = context != null ? context.convert(service) : null;
+        return objectMapper;
+    }
 
-        // Given
-        if (givenAndThen != null && givenAndThen.getGiven() != null) {
-            givenAndThen.getGiven().run();
-        }
-
-        // When
+    public <T> void doMultipart(String url, List<MockMultipartFile> files, T response, ResultMatcher status) throws Exception {
         MockMultipartHttpServletRequestBuilder multipart = multipart(url);
+
         for (MockMultipartFile file : files) {
             multipart = multipart.file(file);
         }
 
-        ResultActions resultActions = mvc.perform(multipart.session(session)).andDo(print());
+        ResultActions resultActions = mvc.perform(multipart.session(session))
+                .andDo(print())
+                .andExpect(status);
 
-        // Then
-        for (ResultMatcher resultMatcher: resultMatchers) {
-            resultActions.andExpect(resultMatcher);
-        }
-
-        if (givenAndThen != null && givenAndThen.getThen() != null) {
-            givenAndThen.getThen().run();
-        }
+        validateResponse(resultActions, response);
     }
+    public <T> void doGet(String url, ResultMatcher status, T response) throws Exception {
+        ResultActions resultActions = mvc.perform(get(url).session(session))
+                .andDo(print())
+                .andExpect(status)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
 
-    public void doGet(Context<S> context, String url, List<ResultMatcher> validators) throws Exception {
-        performRequest(context, get(url), null, validators);
+        validateResponse(resultActions, response);
     }
-    public <T> void doPost(Context<S> context, String url, T request, List<ResultMatcher> validators) throws Exception {
-        performRequest(context, post(url), request, validators);
+    public void doGet(String url, ResultMatcher status) throws Exception {
+        mvc.perform(get(url).session(session))
+                .andDo(print())
+                .andExpect(status)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
-    public <T> void doPatch(Context<S> context, String url, T request, List<ResultMatcher> validators) throws Exception {
-        performRequest(context, patch(url), request, validators);
+    public void doGetWithoutContentType(String url, ResultMatcher status) throws Exception {
+        mvc.perform(get(url).session(session))
+                .andDo(print())
+                .andExpect(status);
     }
-    public void doDelete(Context<S> context, String url, List<ResultMatcher> validators) throws Exception {
-        performRequest(context, delete(url), null, validators);
-    }
-    private <T> void performRequest(Context<S> context, MockHttpServletRequestBuilder requestBuilder, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        GivenAndThen givenAndThen = context != null ? context.convert(service) : null;
-
-        // Given
-        if (givenAndThen != null && givenAndThen.getGiven() != null) {
-            givenAndThen.getGiven().run();
-        }
-
-        // When
-        ResultActions resultActions = mvcPerform(requestBuilder, request);
-
-        // Then
-        for (ResultMatcher resultMatcher: resultMatchers) {
-            resultActions.andExpect(resultMatcher);
-        }
-
-        if (givenAndThen != null && givenAndThen.getThen() != null) {
-            givenAndThen.getThen().run();
-        }
-    }
-    private <T> ResultActions mvcPerform(MockHttpServletRequestBuilder requestBuilder, T request) throws Exception {
-        return mvc.perform(requestBuilder
+    public <R> void doPost(String url, R request, ResultMatcher status) throws Exception {
+        mvc.perform(post(url)
                         .session(session)
-                        .content(gson.toJson(request))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON))
-                .andDo(print());
+                .andDo(print())
+                .andExpect(status);
+    }
+    public <R> void doPatch(String url, R request, ResultMatcher status) throws Exception {
+        mvc.perform(patch(url)
+                        .session(session)
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status);
+    }
+    public void doDelete(String url, ResultMatcher status) throws Exception {
+        mvc.perform(delete(url)
+                        .session(session))
+                .andDo(print())
+                .andExpect(status);
+    }
+
+    public <T> void doMultipart(Mocker<S> mocker, String url, List<MockMultipartFile> files, T response, ResultMatcher status) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doMultipart(url, files, response, status);
+        mocker.executeThens(mockedElement);
+    }
+    public <T> void doGet(Mocker<S> mocker, String url, ResultMatcher status, T response) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doGet(url, status, response);
+        mocker.executeThens(mockedElement);
+    }
+    public <T> void doGet(Mocker<S> mocker, String url, ResultMatcher status) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doGetWithoutContentType(url, status);
+        mocker.executeThens(mockedElement);
+    }
+    public <R> void doPost(Mocker<S> mocker, String url, R request, ResultMatcher status) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doPost(url, request, status);
+        mocker.executeThens(mockedElement);
+    }
+    public <R> void doPatch(Mocker<S> mocker, String url, R request, ResultMatcher status) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doPatch(url, request, status);
+        mocker.executeThens(mockedElement);
+    }
+    public void doDelete(Mocker<S> mocker, String url, ResultMatcher status) throws Exception {
+        mocker.executeGivens(mockedElement);
+        doDelete(url, status);
+        mocker.executeThens(mockedElement);
+    }
+
+    private <T> void validateResponse(ResultActions resultActions, T response) throws Exception {
+        if (response == null) {
+            return;
+        }
+        ObjectMapper objectMapper = objectMapper();
+        resultActions.andExpect(content().json(objectMapper.writeValueAsString(response)));
     }
 }

@@ -1,17 +1,18 @@
 package com.boldfaced7.board.controller;
 
-import com.boldfaced7.board.Context;
+import com.boldfaced7.board.Mocker;
 import com.boldfaced7.board.auth.SessionConst;
-import com.boldfaced7.board.domain.Article;
 import com.boldfaced7.board.dto.ArticleDto;
+import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.boldfaced7.board.dto.request.UpdateArticleRequest;
+import com.boldfaced7.board.dto.response.ArticleListResponse;
+import com.boldfaced7.board.dto.response.ArticleResponse;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.service.ArticleService;
-import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,24 +21,21 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static com.boldfaced7.board.ServiceMethod.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("ArticleController 테스트")
 @WebMvcTest({ArticleController.class})
 class ArticleControllerTest {
 
     @Autowired MockMvc mvc;
-    @Autowired Gson gson;
     @MockBean ArticleService articleService;
     ControllerTestTemplate<ArticleService> testTemplate;
     MockHttpSession session;
@@ -45,138 +43,133 @@ class ArticleControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
-        testTemplate = new ControllerTestTemplate<>(mvc, gson, session, articleService);
+        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        testTemplate = new ControllerTestTemplate<>(mvc, session, articleService);
     }
 
     @DisplayName("[GET] 게시글 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticleRequestTests")
-    void GetArticleTest(String ignoredMessage, Context<ArticleService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, articleUrl(ARTICLE_ID), resultMatchers);
+    @MethodSource
+    <T> void getArticleTest(Mocker<ArticleService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, articleUrl(1L), status, response);
     }
-    static Stream<Arguments> createGetArticleRequestTests() {
-        ArticleDto requestDto = new ArticleDto(ARTICLE_ID, PageRequest.of(0, 20));
+    static Stream<Arguments> getArticleTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        ArticleDto dto = articleDto();
+        valid.mocks(a -> a.getArticle(any()), dto);
 
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticle, requestDto, createArticleDto()),
-                NOT_FOUND, new Context<>(getArticle, requestDto, new ArticleNotFoundException())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), "");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+        Mocker<ArticleService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 게시글");
+        notFound.mocksFunction(a -> a.getArticle(any()), ArticleNotFoundException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("존재하지 않는 게시글", contexts.get(NOT_FOUND), notFound())
+                Arguments.of(valid, OK, new ArticleResponse(dto)),
+                Arguments.of(notFound, NOT_FOUND, null)
         );
     }
 
     @DisplayName("[GET] 게시글 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticlesRequestTest")
-    void GetArticlesTest(String ignoredMessage, Context<ArticleService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, articleUrl(), resultMatchers);
+    @MethodSource
+    <T> void getArticlesTest(Mocker<ArticleService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, articleUrl(), status, response);
     }
-    static Stream<Arguments> createGetArticlesRequestTest() {
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticles, PageRequest.of(0, 20), createArticleDtoCustomPage())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+    static Stream<Arguments> getArticlesTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        CustomPage<ArticleDto> page = articleDtos();
+        valid.mocks(a -> a.getArticles(any(Pageable.class)), page);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers)
+                Arguments.of(valid, OK, new ArticleListResponse(page))
         );
     }
 
     @DisplayName("[GET] 회원 작성 게시글 리스트 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetArticlesOfMemberRequestTest")
-    void GetArticlesOfMemberTest(String ignoredMessage, Context<ArticleService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doGet(context, memberArticleUrl(MEMBER_ID), resultMatchers);
+    @MethodSource
+    <T> void getArticlesOfMemberTest(Mocker<ArticleService> mock, ResultMatcher status, T response) throws Exception {
+        testTemplate.doGet(mock, memberArticleUrl(1L), status, response);
     }
-    static Stream<Arguments> createGetArticlesOfMemberRequestTest() {
-        MemberDto validMemberRequestDto = new MemberDto(MEMBER_ID, PageRequest.of(0, 20));
+    static Stream<Arguments> getArticlesOfMemberTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        CustomPage<ArticleDto> page = articleDtos();
+        valid.mocks(a -> a.getArticles(any(MemberDto.class)), page);
 
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(getArticlesOfMember, validMemberRequestDto, createArticleDtoCustomPage()),
-                NOT_FOUND, new Context<>(getArticlesOfMember, validMemberRequestDto, new MemberNotFoundException())
-        );
-        List<ResultMatcher> exists = exists(List.of("articleId", "title", "content", "author"), ".articles.content[0]");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, ok(), contentTypeJson()).flatMap(List::stream).toList();
+        Mocker<ArticleService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 회원");
+//        notFound.mocksFunction(a -> a.getArticles(any(MemberDto.class)), ArticleNotFoundException.class);
+        notFound.mocksFunction(a -> a.getArticles(any(MemberDto.class)), MemberNotFoundException.class);
 
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), resultMatchers),
-                Arguments.of("존재하지 않는 회원", contexts.get(NOT_FOUND), notFound())
+                Arguments.of(valid, OK, new ArticleListResponse(page)),
+                Arguments.of(notFound, NOT_FOUND, null)
         );
     }
 
     @DisplayName("[POST] 게시글 등록")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPostRequestTests")
-    <T> void PostArticleTest(String ignoredMessage, Context<ArticleService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPost(context, articleUrl(), request, resultMatchers);
+    @MethodSource
+    void postArticleTest(Mocker<ArticleService> mock, String title, String content, ResultMatcher status) throws Exception {
+        testTemplate.doPost(mock, articleUrl(), new SaveArticleRequest(title, content), status);
     }
-    static Stream<Arguments> createPostRequestTests() {
-        SaveArticleRequest validRequest = new SaveArticleRequest(TITLE, CONTENT);
-        ArticleDto validRequestDto = validRequest.toDto();
+    static Stream<Arguments> postArticleTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.saveArticle(any()), 1L);
 
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(saveArticle, validRequestDto, ARTICLE_ID)
-        );
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, created()),
-                Arguments.of("비정상 호출: 제목 누락", null, new SaveArticleRequest("", CONTENT), badRequest()),
-                Arguments.of("비정상 호출: 내용 누락", null, new SaveArticleRequest(TITLE, ""), badRequest()),
-                Arguments.of("비정상 호출: 제목 길이 초과", null, new SaveArticleRequest("a".repeat(Article.MAX_TITLE_LENGTH + 1), CONTENT), badRequest()),
-                Arguments.of("비정상 호출: 내용 길이 초과", null, new SaveArticleRequest(TITLE, "a".repeat(Article.MAX_CONTENT_LENGTH + 1)), badRequest())
+                Arguments.of(valid, TITLE, CONTENT, CREATED),
+                Arguments.of(new Mocker<>("비정상 호출: 제목 누락"), "", CONTENT, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 누락"), TITLE, "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 제목 길이 초과"),EXCEEDED_ARTICLE_TITLE, CONTENT, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 길이 초과"), TITLE, EXCEEDED_ARTICLE_CONTENT, BAD_REQUEST)
         );
     }
 
     @DisplayName("[PATCH] 게시글 수정")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPatchRequestTests")
-    <T> void PatchArticleTest(String ignoredMessage, Context<ArticleService> context, T request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doPatch(context, articleUrl(ARTICLE_ID), request, resultMatchers);
+    @MethodSource
+    void patchArticleTest(Mocker<ArticleService> mock, String title, String content, ResultMatcher status) throws Exception {
+        testTemplate.doPatch(mock, articleUrl(1L), new UpdateArticleRequest(title, content), status);
     }
-    static Stream<Arguments> createPatchRequestTests() {
-        UpdateArticleRequest validRequest = new UpdateArticleRequest(TITLE, CONTENT);
-        ArticleDto validRequestDto = validRequest.toDto(ARTICLE_ID);
+    static Stream<Arguments> patchArticleTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.updateArticle(any()));
 
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(updateArticle, validRequestDto),
-                NOT_FOUND, new Context<>(updateArticle, validRequestDto, new ArticleNotFoundException()),
-                FORBIDDEN, new Context<>(updateArticle, validRequestDto, new ForbiddenException())
-        );
+        Mocker<ArticleService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 게시글");
+        notFound.mocksConsumer(a -> a.updateArticle(any()), ArticleNotFoundException.class);
+
+        Mocker<ArticleService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(a -> a.updateArticle(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 게시글", contexts.get(NOT_FOUND), validRequest, notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), validRequest, forbidden()),
-                Arguments.of("비정상 호출: 제목 누락", null, new UpdateArticleRequest("", CONTENT), badRequest()),
-                Arguments.of("비정상 호출: 내용 누락", null, new UpdateArticleRequest(TITLE, ""), badRequest()),
-                Arguments.of("비정상 호출: 제목 길이 초과", null, new UpdateArticleRequest("a".repeat(Article.MAX_TITLE_LENGTH + 1), CONTENT), badRequest()),
-                Arguments.of("비정상 호출: 내용 길이 초과", null, new UpdateArticleRequest(TITLE, "a".repeat(Article.MAX_CONTENT_LENGTH + 1)), badRequest())
+                Arguments.of(valid, TITLE, CONTENT, OK),
+                Arguments.of(notFound, TITLE, CONTENT, NOT_FOUND),
+                Arguments.of(forbidden, TITLE, CONTENT, FORBIDDEN),
+                Arguments.of(new Mocker<>("비정상 호출: 제목 누락"), "", CONTENT, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 누락"), TITLE, "", BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 제목 길이 초과"), EXCEEDED_ARTICLE_TITLE, CONTENT, BAD_REQUEST),
+                Arguments.of(new Mocker<>("비정상 호출: 내용 길이 초과"), TITLE, EXCEEDED_ARTICLE_CONTENT, BAD_REQUEST)
         );
     }
 
     @DisplayName("[DELETE] 게시글 삭제")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createDeleteRequestTests")
-    void deleteArticleTest(String ignoredMessage, Context<ArticleService> context, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doDelete(context, articleUrl(ARTICLE_ID), resultMatchers);
+    @MethodSource
+    void deleteArticleTest(Mocker<ArticleService> mock, ResultMatcher status) throws Exception {
+        testTemplate.doDelete(mock, articleUrl(1L), status);
     }
-    static Stream<Arguments> createDeleteRequestTests() {
-        ArticleDto validRequestDto = ArticleDto.builder().articleId(ARTICLE_ID).build();
+    static Stream<Arguments> deleteArticleTest() {
+        Mocker<ArticleService> valid = new Mocker<>("정상 호출");
+        valid.mocks(a -> a.softDeleteArticle(any()));
 
-        Map<String, Context<ArticleService>> contexts = Map.of(
-                VALID, new Context<>(softDeleteArticle, validRequestDto),
-                NOT_FOUND, new Context<>(softDeleteArticle, validRequestDto, new ArticleNotFoundException()),
-                FORBIDDEN, new Context<>(softDeleteArticle, validRequestDto, new ForbiddenException())
-        );
+        Mocker<ArticleService> notFound = new Mocker<>("비정상 호출: 존재하지 않는 게시글");
+        notFound.mocksConsumer(a -> a.softDeleteArticle(any()), ArticleNotFoundException.class);
+
+        Mocker<ArticleService> forbidden = new Mocker<>("비정상 호출: 타 회원 시도");
+        forbidden.mocksConsumer(a -> a.softDeleteArticle(any()), ForbiddenException.class);
+
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), ok()),
-                Arguments.of("비정상 호출: 존재하지 않는 게시글", contexts.get(NOT_FOUND), notFound()),
-                Arguments.of("비정상 호출: 타 회원 시도", contexts.get(FORBIDDEN), forbidden())
+                Arguments.of(valid, OK),
+                Arguments.of(notFound, NOT_FOUND),
+                Arguments.of(forbidden, FORBIDDEN)
         );
     }
 }

@@ -1,10 +1,9 @@
 package com.boldfaced7.board.controller;
 
-import com.boldfaced7.board.Context;
+import com.boldfaced7.board.Mocker;
 import com.boldfaced7.board.auth.SessionConst;
-import com.boldfaced7.board.dto.AttachmentDto;
+import com.boldfaced7.board.dto.response.SaveAttachmentsResponse;
 import com.boldfaced7.board.service.AttachmentService;
-import com.google.gson.Gson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,17 +18,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
-import static com.boldfaced7.board.ServiceMethod.*;
 import static com.boldfaced7.board.TestUtil.*;
+import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("AttachmentController 테스트")
 @WebMvcTest({AttachmentController.class})
 class AttachmentControllerTest {
     @Autowired MockMvc mvc;
-    @Autowired Gson gson;
     @MockBean  AttachmentService attachmentService;
     ControllerTestTemplate<AttachmentService> testTemplate;
     MockHttpSession session;
@@ -37,27 +34,23 @@ class AttachmentControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, createAuthResponse());
-        testTemplate = new ControllerTestTemplate<>(mvc, gson, session, attachmentService);
+        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        testTemplate = new ControllerTestTemplate<>(mvc, session, attachmentService);
     }
 
     @DisplayName("[POST] 첨부 파일 업로드")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPostRequestTests")
-    <T> void PostAttachmentTest(String ignoredMessage, Context<AttachmentService> context, List<MockMultipartFile> request, List<ResultMatcher> resultMatchers) throws Exception {
-        testTemplate.doMultipart(context, attachmentUrl(), request, resultMatchers);
+    @MethodSource
+    <T> void postAttachmentTest(Mocker<AttachmentService> mock, List<MockMultipartFile> request, T response, ResultMatcher status) throws Exception {
+        testTemplate.doMultipart(mock, attachmentUrl(), request, response, status);
     }
-    static Stream<Arguments> createPostRequestTests() {
-        List<MockMultipartFile> validRequest = List.of(createMultipartFile());
-        List<AttachmentDto> validRequestDtos = validRequest.stream().map(AttachmentDto::new).toList();
+    static Stream<Arguments> postAttachmentTest() {
+        Mocker<AttachmentService> valid = new Mocker<>("정상 호출");
+        List<String> names = List.of(STORED_NAME + JPG);
+        valid.mocks(a -> a.saveAttachments(any()), names);
 
-        Map<String, Context<AttachmentService>> contexts = Map.of(
-                VALID, new Context<>(saveAttachments, validRequestDtos, List.of(STORED_NAME+JPG))
-        );
-        List<ResultMatcher> exists = exists(List.of("attachmentNames"), "");
-        List<ResultMatcher> resultMatchers = Stream.of(exists, created(), contentTypeJson()).flatMap(List::stream).toList();
         return Stream.of(
-                Arguments.of("정상 호출", contexts.get(VALID), validRequest, resultMatchers)
+                Arguments.of(valid, multipartFiles(), new SaveAttachmentsResponse(names), CREATED)
         );
     }
 }

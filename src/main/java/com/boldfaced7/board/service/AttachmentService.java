@@ -18,6 +18,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -57,7 +58,9 @@ public class AttachmentService {
     }
 
     public List<String> saveAttachments(List<AttachmentDto> dtos) {
-        return dtos.stream().map(this::saveAttachment).toList();
+        List<MultipartFile> multipartFiles = dtos.stream().map(AttachmentDto::getMultipartFile).toList();
+        List<Attachment> attachments = fileStore.storeFiles(multipartFiles);
+        return attachments.stream().map(Attachment::getStoredName).toList();
     }
 
     @Caching(

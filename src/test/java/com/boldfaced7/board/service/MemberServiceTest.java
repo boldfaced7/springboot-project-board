@@ -1,6 +1,5 @@
 package com.boldfaced7.board.service;
 
-import com.boldfaced7.board.Assertion;
 import com.boldfaced7.board.Context;
 import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.domain.Member;
@@ -9,6 +8,7 @@ import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import com.boldfaced7.board.repository.MemberRepository;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,37 +19,35 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
-import static com.boldfaced7.board.RepoMethod.*;
+import static com.boldfaced7.board.service.Facade.*;
+import static com.boldfaced7.board.service.ServiceTestTemplate.doTest;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 
 @DisplayName("MemberService 테스트")
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
     @InjectMocks private MemberService memberService;
-    @Mock private MemberRepository memberRepository;
-    @Mock private BCryptPasswordEncoder encoder;
-    ServiceTestTemplate testTemplate;
-
-    static final String FOUND = "found";
+    @Mock private MemberRepository mockMemberRepository;
+    @Mock private PasswordEncoder mockPasswordEncoder;
+    Facade facade;
 
     @BeforeEach
     void setUp() {
-        AuthInfoHolder.setAuthInfo(createAuthResponse());
-        DependencyHolder dependencyHolder = DependencyHolder.builder().encoder(encoder)
-                .memberRepository(memberRepository).build();
-
-        testTemplate = new ServiceTestTemplate(dependencyHolder);
+        AuthInfoHolder.setAuthInfo(authResponse());
+        facade = builder()
+                .mockMemberRepository(mockMemberRepository)
+                .mockPasswordEncoder(mockPasswordEncoder)
+                .build();
     }
 
     @AfterEach
@@ -59,197 +57,159 @@ class MemberServiceTest {
 
     @DisplayName("email 중복 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetEmailAndNicknameExistenceRequestTests")
-    void getEmailExistenceTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, String request, List<Assertion<Boolean>> assertions) {
-        testTemplate.performRequest(contexts, memberService::isOccupiedEmail, request, assertions);
+    @MethodSource
+    void getEmailExistenceTest(Context<Facade, Boolean> context, String request) {
+        doTest(() -> memberService.isOccupiedEmail(request), context, facade);
     }
-    static Stream<Arguments> createGetEmailAndNicknameExistenceRequestTests() {
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                FOUND, List.of(new Context<>(existsMemberByEmail, EMAIL, true, memberRepoFunc)),
-                NOT_FOUND, List.of(new Context<>(existsMemberByEmail, EMAIL, false, memberRepoFunc))
-        );
-        Map<String, List<Assertion<Boolean>>> assertions = Map.of(
-                FOUND, List.of(new Assertion<>(true)),
-                NOT_FOUND, List.of(new Assertion<>(false))
-        );
-        return Stream.of(
-                Arguments.of("email 중복 O", contexts.get(FOUND), EMAIL, assertions.get(FOUND)),
-                Arguments.of("email 중복 X", contexts.get(NOT_FOUND), EMAIL, assertions.get(NOT_FOUND))
-        );
+    static Stream<Arguments> getEmailExistenceTest() {
+        Context<Facade, Boolean> found = new Context<>("E-mail 중복 O");
+        found.mocks(memberRepository, m -> m.existsByEmail(any()), true);
+        found.asserts(b -> Assertions.assertThat(b).isEqualTo(true));
+
+        Context<Facade, Boolean> notFound = new Context<>("E-mail 중복 X");
+        notFound.mocks(memberRepository, m -> m.existsByEmail(any()), false);
+        notFound.asserts(b -> Assertions.assertThat(b).isEqualTo(false));
+
+        return Stream.of(Arguments.of(found, EMAIL), Arguments.of(notFound, EMAIL));
     }
 
-    @DisplayName("nickname 중복 조회")
+    @DisplayName("Nickname 중복 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetNicknameExistenceRequestTests")
-    void getNicknameExistenceTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, String request, List<Assertion<Boolean>> assertions) {
-        testTemplate.performRequest(contexts, memberService::isOccupiedNickname, request, assertions);
+    @MethodSource
+    void getNicknameExistenceTest(Context<Facade, Boolean> context, String request) {
+        doTest(() -> memberService.isOccupiedNickname(request), context, facade);
     }
-    static Stream<Arguments> createGetNicknameExistenceRequestTests() {
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                FOUND, List.of(new Context<>(existsMemberByNickname, NICKNAME, true, memberRepoFunc)),
-                NOT_FOUND, List.of(new Context<>(existsMemberByNickname, NICKNAME, false, memberRepoFunc))
-        );
-        Map<String, List<Assertion<Boolean>>> assertions = Map.of(
-                FOUND, List.of(new Assertion<>(true)),
-                NOT_FOUND, List.of(new Assertion<>(false))
-        );
-        return Stream.of(
-                Arguments.of("nickname 중복 O", contexts.get(FOUND), NICKNAME, assertions.get(FOUND)),
-                Arguments.of("nickname 중복 X", contexts.get(NOT_FOUND), NICKNAME, assertions.get(NOT_FOUND))
-        );    }
+    static Stream<Arguments> getNicknameExistenceTest() {
+        Context<Facade, Boolean> found = new Context<>("Nickname 중복 O");
+        found.mocks(memberRepository, m -> m.existsByNickname(any()), true);
+        found.asserts(b -> Assertions.assertThat(b).isEqualTo(true));
+
+        Context<Facade, Boolean> notFound = new Context<>("Nickname 중복 X");
+        notFound.mocks(memberRepository, m -> m.existsByNickname(any()), false);
+        notFound.asserts(b -> Assertions.assertThat(b).isEqualTo(false));
+
+        return Stream.of(Arguments.of(found, NICKNAME), Arguments.of(notFound, NICKNAME));
+    }
 
     @DisplayName("회원 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetMemberRequestTests")
-    void getMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Long request, List<Assertion<MemberDto>> assertions) {
-        testTemplate.performRequest(contexts, memberService::getMember, request, assertions);
+    @MethodSource
+    void getMemberTest(Context<Facade, MemberDto> context, Long request) {
+        doTest(() -> memberService.getMember(request), context, facade);
     }
-    static Stream<Arguments> createGetMemberRequestTests() {
-        Member member = createMember();
+    static Stream<Arguments> getMemberTest() {
+        Context<Facade,MemberDto> valid = new Context<>("회원 id를 입력하면, 회원 정보를 반환");
+        valid.mocks(memberRepository, m -> m.findById(anyLong()), Optional.of(member()));
+        valid.asserts(dto -> assertThat(dto.getMemberId()).isNotNull());
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
-                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc))
-        );
-        Map<String, List<Assertion<MemberDto>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(new MemberDto(member))),
-                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class))
-        );
-        return Stream.of(
-                Arguments.of("id를 입력하면, 회원 정보를 반환", contexts.get(VALID), MEMBER_ID, assertions.get(VALID)),
-                Arguments.of("잘못된 id를 입력하면, 반환 없이 예외를 던짐", contexts.get(NOT_FOUND), MEMBER_ID, assertions.get(NOT_FOUND))
-        );
+        Context<Facade, ?> notFound = new Context<>("잘못된 회원 id를 입력하면, 반환 없이 예외를 던짐");
+        valid.mocks(memberRepository, m -> m.findById(anyLong()), Optional.empty());
+        notFound.assertsThrowable(t -> assertThat(t).isInstanceOf(MemberNotFoundException.class));
+
+        return Stream.of(Arguments.of(valid, 1L), Arguments.of(notFound, 2L));
     }
 
     @DisplayName("회원 목록 조회")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createGetMembersRequestTests")
-    void getMembersTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, Pageable pageable, List<Assertion<CustomPage<MemberDto>>> assertions) {
-        testTemplate.performRequest(contexts, memberService::getMembers, pageable, assertions);
+    @MethodSource
+    void getMembersTest(Context<Facade,CustomPage<?>> context, Pageable request) {
+        doTest(() -> memberService.getMembers(request), context, facade);
     }
-    static Stream<Arguments> createGetMembersRequestTests() {
-        PageRequest pageable = PageRequest.of(0, 20);
+    static Stream<Arguments> getMembersTest() {
+        Context<Facade,CustomPage<?>> valid = new Context<>("회원 목록을 반환");
+        valid.mocks(memberRepository, m -> m.findAll(any(Pageable.class)), members());
+        valid.asserts(dtos -> assertThat(dtos.getContent()).isNotEmpty());
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMembers, pageable, new PageImpl<>(List.of(createMember())), memberRepoFunc))
-        );
-        Map<String, List<Assertion<List<MemberDto>>>> assertions = Map.of(VALID, List.of(new Assertion<>()));
-        return Stream.of(Arguments.of("회원 목록을 반환", contexts.get(VALID), pageable, assertions.get(VALID)));
+        return Stream.of(Arguments.of(valid, pageable()));
     }
 
     @DisplayName("회원 저장")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createPostMemberRequestTests")
-    void PostMemberTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Long>> assertions) {
-        testTemplate.performRequest(contexts, memberService::saveMember, request, assertions);
+    @MethodSource
+    void postMemberTests(Context<Facade, Long> context, MemberDto request) {
+        doTest(() -> memberService.saveMember(request), context, facade);
     }
-    static Stream<Arguments> createPostMemberRequestTests() {
-        MemberDto requestDto = MemberDto.builder().email(EMAIL).password(PASSWORD).nickname(NICKNAME).build();
+    static Stream<Arguments> postMemberTests() {
+        Context<Facade, Long> valid = new Context<>("회원 정보를 입력하면, 회원을 저장");
+        valid.mocks(passwordEncoder, p -> p.encode(any()), PASSWORD);
+        valid.mocks(memberRepository, m -> m.save(any()), member());
+        valid.asserts(id -> assertThat(id).isEqualTo(1L));
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(
-                        new Context<>(encode, PASSWORD, PASSWORD, encoderFunc),
-                        new Context<>(saveMember, requestDto.toEntity(), createMember(), memberRepoFunc)
-                )
-        );
-        Map<String, List<Assertion<Long>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(MEMBER_ID))
-        );
-        return Stream.of(
-                Arguments.of("회원 작성 정보를 입력하면, 회원을 저장", contexts.get(VALID), requestDto, assertions.get(VALID))
-        );
+        return Stream.of(Arguments.of(valid, memberDto()));
     }
 
     @DisplayName("회원 수정")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("UpdateMemberRequestTests")
-    void UpdateMemberTests(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions, Member target) {
-        testTemplate.performRequest(contexts, memberService::updateMember, request, assertions, target);
+    @MethodSource
+    void updateMemberTests(Context<Facade, ?> context, MemberDto request) {
+        doTest(() -> memberService.updateMember(request), context, facade);
     }
-    static Stream<Arguments> UpdateMemberRequestTests() {
-        Member member = createMember();
+    static Stream<Arguments> updateMemberTests() {
+        Member target = member();
 
-        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).password("New").nickname("New").build();
-        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).password("New").nickname("New").build();
+        Context<Facade, ?> valid = new Context<>("id와 회원 수정 정보를 입력하면, 회원 정보를 수정");
+        valid.mocks(memberRepository, m -> m.findById(anyLong()), Optional.of(target));
+        valid.mocks(passwordEncoder, p -> p.encode(any()), NEW);
+        valid.asserts(() -> assertThat(target).hasFieldOrPropertyWithValue("password", NEW)
+                                              .hasFieldOrPropertyWithValue("nickname", NEW));
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(
-                        new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc),
-                        new Context<>(encode, "New", "New", encoderFunc)
-                ),
-                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
-                FORBIDDEN, List.of()
-        );
-        Map<String, List<Assertion<Member>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(Map.of("password", requestDto.getPassword(),"nickname", requestDto.getNickname()))),
-                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
-                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
-        );
-        return Stream.of(
-                Arguments.of("id와 회원 수정 정보를 입력하면, 회원을 수정", contexts.get(VALID), requestDto, assertions.get(VALID), member),
-                Arguments.of("잘못된 id를 입력하면, 수정 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
-                Arguments.of("잘못된 회원이 접근하면, 수정 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN), null)
-        );
+        Context<Facade, ?> notFound = new Context<>("잘못된 id를 입력하면, 수정 없이 예외를 던짐");
+        notFound.mocks(memberRepository, m -> m.findById(anyLong()), Optional.empty());
+        notFound.assertsThrowable(t -> assertThat(t).isInstanceOf(MemberNotFoundException.class));
+
+        Context<Facade, ?> forbidden = new Context<>("잘못된 회원이 접근하면, 수정 없이 예외를 던짐");
+        forbidden.assertsThrowable(t -> assertThat(t).isInstanceOf(ForbiddenException.class));
+        MemberDto forbiddenRequest = MemberDto.builder().memberId(2L).password(NEW).nickname(NEW).build();
+
+        return Stream.of(Arguments.of(valid, memberDto(NEW, NEW)), Arguments.of(notFound, memberDto(NEW, NEW)),
+                Arguments.of(forbidden, forbiddenRequest));
     }
 
     @DisplayName("회원 비활성화")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createInactiveMemberRequestTests")
-    void deactivateMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions, Member target) {
-        testTemplate.performRequest(contexts, memberService::softDeleteMember, request, assertions, target);
+    @MethodSource
+    void deactivateMemberTests(Context<Facade, ?> context, MemberDto request) {
+        doTest(() -> memberService.softDeleteMember(request), context, facade);
     }
-    static Stream<Arguments> createInactiveMemberRequestTests() {
-        Member member = createMember();
+    static Stream<Arguments> deactivateMemberTests() {
+        Member target = member();
 
-        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).build();
-        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).build();
+        Context<Facade, ?> valid = new Context<>("id를 입력하면, 회원을 비활성화");
+        valid.mocks(memberRepository, a -> a.findById(anyLong()), Optional.of(target));
+        valid.asserts(() -> assertThat(target).hasFieldOrPropertyWithValue("isActive", false));
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc)),
-                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
-                FORBIDDEN, List.of()
-        );
-        Map<String, List<Assertion<Member>>> assertions = Map.of(
-                VALID, List.of(new Assertion<>(Map.of("isActive", false))),
-                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
-                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
-        );
-        return Stream.of(
-                Arguments.of("id를 입력하면, 회원을 비활성화", contexts.get(VALID), requestDto, assertions.get(VALID), member),
-                Arguments.of("잘못된 id를 입력하면, 비활성화 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND), null),
-                Arguments.of("잘못된 회원이 접근하면, 비활성화 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN), null)
-        );
+        Context<Facade, ?> notFound = new Context<>("잘못된 id를 입력하면, 비활성화 없이 예외를 던짐");
+        notFound.mocks(memberRepository, a -> a.findById(anyLong()), Optional.empty());
+        notFound.assertsThrowable(t -> assertThat(t).isInstanceOf(MemberNotFoundException.class));
+
+        Context<Facade, ?> forbidden = new Context<>("잘못된 회원이 접근하면, 비활성화 없이 예외를 던짐");
+        forbidden.assertsThrowable(t -> assertThat(t).isInstanceOf(ForbiddenException.class));
+        MemberDto forbiddenRequest = MemberDto.builder().memberId(2L).build();
+
+        return Stream.of(Arguments.of(valid, memberDto()), Arguments.of(notFound, memberDto()),
+                Arguments.of(forbidden, forbiddenRequest));
     }
 
-    @DisplayName("회원 삭제")
+    @DisplayName("게시글 삭제")
     @ParameterizedTest(name = "{index}: {0}")
-    @MethodSource("createDeleteMemberRequestTests")
-    void deleteMemberTest(String ignoredMessage, List<Context<DependencyHolder>> contexts, MemberDto request, List<Assertion<Member>> assertions) {
-        testTemplate.performRequest(contexts, memberService::hardDeleteMember, request, assertions, null);
+    @MethodSource
+    void deleteMemberTests(Context<Facade, ?> context, MemberDto request) {
+        doTest(() -> memberService.hardDeleteMember(request), context, facade);
     }
-    static Stream<Arguments> createDeleteMemberRequestTests() {
-        Member member = createMember();
+    static Stream<Arguments> deleteMemberTests() {
+        Context<Facade, ?> valid = new Context<>("id를 입력하면, 회원을 삭제");
+        valid.mocks(memberRepository, a -> a.findById(anyLong()), Optional.of(member()));
+        valid.mocks(memberRepository, a -> a.delete(any()));
 
-        MemberDto requestDto = MemberDto.builder().memberId(MEMBER_ID).build();
-        MemberDto forbiddenRequestDto = MemberDto.builder().memberId(MEMBER_ID+1).build();
+        Context<Facade, ?> notFound = new Context<>("잘못된 id를 입력하면, 삭제 없이 예외를 던짐");
+        notFound.mocks(memberRepository, a -> a.findById(anyLong()), Optional.empty());
+        notFound.assertsThrowable(t -> assertThat(t).isInstanceOf(MemberNotFoundException.class));
 
-        Map<String, List<Context<DependencyHolder>>> contexts = Map.of(
-                VALID, List.of(
-                        new Context<>(findMemberById, MEMBER_ID, Optional.of(member), memberRepoFunc),
-                        new Context<>(deleteMember, member, memberRepoFunc)
-                ),
-                NOT_FOUND, List.of(new Context<>(findMemberById, MEMBER_ID, Optional.empty(), memberRepoFunc)),
-                FORBIDDEN, List.of()
-        );
-        Map<String, List<Assertion<Member>>> assertions = Map.of(
-                VALID, List.of(),
-                NOT_FOUND, List.of(new Assertion<>(MemberNotFoundException.class)),
-                FORBIDDEN, List.of(new Assertion<>(ForbiddenException.class))
-        );
-        return Stream.of(
-                Arguments.of("id를 입력하면, 회원을 삭제", contexts.get(VALID), requestDto, assertions.get(VALID)),
-                Arguments.of("잘못된 id를 입력하면, 삭제 없이 예외를 던짐", contexts.get(NOT_FOUND), requestDto, assertions.get(NOT_FOUND)),
-                Arguments.of("잘못된 회원이 접근하면, 삭제 없이 예외를 던짐", contexts.get(FORBIDDEN), forbiddenRequestDto, assertions.get(FORBIDDEN))
-        );
+        Context<Facade, ?> forbidden = new Context<>("잘못된 회원이 접근하면, 삭제 없이 예외를 던짐");
+        forbidden.assertsThrowable(t -> assertThat(t).isInstanceOf(ForbiddenException.class));
+        MemberDto forbiddenRequest = MemberDto.builder().memberId(2L).build();
+
+        return Stream.of(Arguments.of(valid, memberDto()), Arguments.of(notFound, memberDto()),
+                Arguments.of(forbidden, forbiddenRequest));
     }
 }

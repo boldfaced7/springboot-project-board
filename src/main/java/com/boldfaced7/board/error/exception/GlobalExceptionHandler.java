@@ -2,6 +2,8 @@ package com.boldfaced7.board.error.exception;
 
 import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.ErrorResponse;
+import com.boldfaced7.board.error.exception.member.MemberEmailDuplicatedException;
+import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceResolvable;
@@ -19,6 +21,15 @@ import java.util.Locale;
 public class GlobalExceptionHandler {
 
     private final MessageSource messageSource;
+
+    @ExceptionHandler(MemberNotFoundException.class)
+    protected ResponseEntity<ErrorResponse> handle(MemberNotFoundException e) {
+        return createErrorResponseEntity(ErrorCode.MEMBER_NOT_FOUND);
+    }
+    @ExceptionHandler(MemberEmailDuplicatedException.class)
+    protected ResponseEntity<ErrorResponse> handle(MemberEmailDuplicatedException e) {
+        return GlobalExceptionHandler.createErrorResponseEntity(ErrorCode.MEMBER_EMAIL_DUPLICATED);
+    }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     protected ResponseEntity<ErrorResponse> handle(HttpRequestMethodNotSupportedException e) {

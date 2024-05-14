@@ -9,10 +9,7 @@ import com.boldfaced7.board.dto.MemberDto;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
-import com.boldfaced7.board.repository.ArticleCommentRepository;
-import com.boldfaced7.board.repository.ArticleRepository;
-import com.boldfaced7.board.repository.AttachmentRepository;
-import com.boldfaced7.board.repository.MemberRepository;
+import com.boldfaced7.board.repository.*;
 import com.boldfaced7.board.repository.filestore.LocalFileStore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +43,7 @@ class ArticleServiceTest {
     @Mock ArticleCommentRepository mockArticleCommentRepository;
     @Mock MemberRepository mockMemberRepository;
     @Mock AttachmentRepository mockAttachmentRepository;
+    @Mock ArticleTicketRepository mockArticleTicketRepository;
     @Mock LocalFileStore mockFileStore;
     Facade facade;
 
@@ -57,6 +55,7 @@ class ArticleServiceTest {
                 .mockArticleCommentRepository(mockArticleCommentRepository)
                 .mockMemberRepository(mockMemberRepository)
                 .mockAttachmentRepository(mockAttachmentRepository)
+                .mockArticleTicketRepository(mockArticleTicketRepository)
                 .mockFileStore(mockFileStore)
                 .build();
     }
@@ -134,6 +133,7 @@ class ArticleServiceTest {
         valid.mocks(memberRepository, m -> m.findById(anyLong()), Optional.of(member()));
         valid.mocks(articleRepository, a -> a.save(any()), article());
         valid.mocks(attachmentRepository, a -> a.updateAttachments(any(), any()), 1);
+        valid.mocks(articleTicketRepository, a -> a.findAvailable(any(), any(), any()));
         valid.asserts(id -> assertThat(id).isEqualTo(1L));
 
         Context<Facade, ?> notFound = new Context<>("존재하지 않는 회원의 요청이면, 반환 없이 예외를 던짐");

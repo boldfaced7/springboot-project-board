@@ -1,19 +1,14 @@
 package com.boldfaced7.board.service;
 
 import com.boldfaced7.board.auth.AuthInfoHolder;
-import com.boldfaced7.board.domain.Article;
-import com.boldfaced7.board.domain.ArticleComment;
-import com.boldfaced7.board.domain.Attachment;
-import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.domain.*;
 import com.boldfaced7.board.dto.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import com.boldfaced7.board.error.exception.article.ArticleNotFoundException;
+import com.boldfaced7.board.error.exception.articleticket.ArticleTicketNotFoundException;
 import com.boldfaced7.board.error.exception.auth.ForbiddenException;
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
-import com.boldfaced7.board.repository.ArticleCommentRepository;
-import com.boldfaced7.board.repository.ArticleRepository;
-import com.boldfaced7.board.repository.AttachmentRepository;
-import com.boldfaced7.board.repository.MemberRepository;
+import com.boldfaced7.board.repository.*;
 import com.boldfaced7.board.repository.filestore.FileStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -24,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -35,6 +32,7 @@ public class ArticleService {
     private final ArticleCommentRepository articleCommentRepository;
     private final MemberRepository memberRepository;
     private final AttachmentRepository attachmentRepository;
+    private final ArticleTicketRepository articleTicketRepository;
     private final FileStore fileStore;
 
     @Cacheable(value = "article", key = "#dto.articleId", condition = "#dto.pageable.pageNumber == 0")
@@ -87,12 +85,13 @@ public class ArticleService {
     public Long saveArticle(ArticleDto dto) {
         Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
         Member member = findMemberById(memberId);
+        ArticleTicket articleTicket = findAvailableArticleTicket(member);
         Article article = articleRepository.save(dto.toEntityForSaving(member));
 
         if (!dto.getAttachmentNames().isEmpty()) {
             attachmentRepository.updateAttachments(article, dto.getAttachmentNames());
         }
-
+        articleTicket.useTicket();
         return article.getId();
     }
 
@@ -134,10 +133,18 @@ public class ArticleService {
         return articleRepository.findById(articleId)
                 .orElseThrow(ArticleNotFoundException::new);
     }
+
     private Member findMemberById(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
     }
+
+    private ArticleTicket findAvailableArticleTicket(Member member) {
+        LocalDateTime today = LocalDate.now().atStartOfDay();
+        return articleTicketRepository.findAvailable(member, today, today.plusDays(1))
+                .orElseThrow(ArticleTicketNotFoundException::new);
+    }
+
     private void authorizeAuthor(Article article) {
         AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
         if (authInfo == null || !authInfo.getMemberId().equals(article.getMember().getId())) {

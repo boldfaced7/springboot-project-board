@@ -1,9 +1,6 @@
 package com.boldfaced7.board;
 
-import com.boldfaced7.board.domain.Article;
-import com.boldfaced7.board.domain.ArticleComment;
-import com.boldfaced7.board.domain.Attachment;
-import com.boldfaced7.board.domain.Member;
+import com.boldfaced7.board.domain.*;
 import com.boldfaced7.board.dto.*;
 import com.boldfaced7.board.dto.response.AuthResponse;
 import org.springframework.data.domain.Page;
@@ -49,6 +46,8 @@ public class TestUtil {
     public static final String API = "/api";
     public static final String ARTICLES = "articles";
     public static final String ARTICLE_COMMENTS = "articleComments";
+    public static final String ARTICLE_TICKETS = "articleTickets";
+
     public static final String MEMBERS = "members";
     public static final String ATTACHMENTS = "attachments";
     public static final String PASSWORDS = "passwords";
@@ -116,6 +115,20 @@ public class TestUtil {
     }
     public static Page<ArticleComment> articleComments() {
         return new PageImpl<>(List.of(articleComment()));
+    }
+
+    public static ArticleTicket articleTicket(Long id) {
+        ArticleTicket articleTicket = ArticleTicket.builder()
+                .member(member())
+                .build();
+        ReflectionTestUtils.setField(articleTicket, "id", id);
+        return articleTicket;
+    }
+    public static ArticleTicket articleTicket() {
+        return articleTicket(1L);
+    }
+    public static Page<ArticleTicket> articleTickets() {
+        return new PageImpl<>(List.of(articleTicket()));
     }
 
     public static Attachment attachment(Long id) {
@@ -219,6 +232,10 @@ public class TestUtil {
         return new CustomPage<>(List.of(articleCommentDto()), 0, 0, 1);
     }
 
+
+
+
+
     public static AttachmentDto attachmentDto(Long id) {
         return AttachmentDto.builder()
                 .attachmentId(id)
@@ -316,4 +333,16 @@ public class TestUtil {
     private static String combine(String frontUrl, String backUrl) {
         return frontUrl + "/" + backUrl;
     }
+
+    public static String articleTicketUrl() {
+        return combine(API, ARTICLE_TICKETS);
+    }
+    public static String articleTicketUrl(Long articleTicketId) {
+        return combine(articleTicketUrl(), articleTicketId);
+    }
+    public static String memberArticleTicketUrl(Long memberId) {
+        return combine(memberUrl(memberId), ARTICLE_TICKETS);
+    }
+
+
 }

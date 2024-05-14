@@ -21,8 +21,9 @@ public enum ErrorCode {
     ARTICLE_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLECOMMNET001", "존재하지 않는 댓글입니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER001", "존재하지 않는 회원입니다."),
     ATTACHMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ATTACHMENT001", "존재하지 않는 첨부파일입니다."),
-
-    MEMBER_EMAIL_DUPLICATED(HttpStatus.BAD_REQUEST, "MEMBER002", "이미 존재하는 이메일입니다.");
+    ARTICLE_TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLETICKET001", "존재하지 않는 티켓입니다."),
+    MEMBER_EMAIL_DUPLICATED(HttpStatus.BAD_REQUEST, "MEMBER002", "이미 존재하는 이메일입니다."),
+    ARTICLE_TICKET_SOLD_OUT(HttpStatus.NOT_FOUND, "ARTICLETICKET002", "티켓이 모두 발급되었습니다.");
 
     private final HttpStatus status;
     private final String code;

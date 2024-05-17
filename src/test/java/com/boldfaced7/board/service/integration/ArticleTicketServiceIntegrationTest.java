@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -16,7 +17,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.boldfaced7.board.TestUtil.authResponse;
 
-@DisplayName("ArticleTicketServiceIntegrationTest 통합 테스트")
+@ActiveProfiles("test")
+@DisplayName("ArticleTicketService 통합 테스트")
 @SpringBootTest
 public class ArticleTicketServiceIntegrationTest {
     @Autowired ArticleTicketService articleTicketService;

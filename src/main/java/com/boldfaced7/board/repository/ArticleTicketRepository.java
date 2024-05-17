@@ -9,6 +9,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface ArticleTicketRepository extends Repository<ArticleTicket, Long> {
@@ -21,18 +22,19 @@ public interface ArticleTicketRepository extends Repository<ArticleTicket, Long>
     Optional<ArticleTicket> findById(@Param("id") Long id);
 
     @Query("select a from ArticleTicket a" +
-            " where a.member = : member" +
-            " and a.createdAt >= :from and a.createdAt < :to" +
-            " and a.used = true" +
-            " order by a.id ASC limit 1")
-    Optional<ArticleTicket> findAvailable(@Param("member") Member member, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+            " where a.member = :member" +
+            " and a.createdAt >= :from " +
+            " and a.createdAt < :to" +
+            " and a.used = false")
+    List<ArticleTicket> findAvailable(@Param("member") Member member, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("select a from ArticleTicket a" +
             " where a.member = :member")
     Page<ArticleTicket> findAllByMember(Pageable pageable, @Param("member") Member member);
 
     @Query("select a from ArticleTicket a" +
-            " where a.createdAt >= :from and a.createdAt < :to" +
+            " where a.createdAt >= :from" +
+            " and a.createdAt < :to" +
             " order by a.createdAt")
     Page<ArticleTicket> findAllByDate(Pageable pageable, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
@@ -42,7 +44,8 @@ public interface ArticleTicketRepository extends Repository<ArticleTicket, Long>
     Optional<Long> findCriteria(@Param("today") LocalDateTime today);
 
     @Query("select COUNT(a) from ArticleTicket a" +
-            " where a.createdAt >= :from and a.createdAt < :to" +
+            " where a.createdAt >= :from" +
+            " and a.createdAt < :to" +
             " order by a.createdAt")
     int countArticleTicketByDate(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

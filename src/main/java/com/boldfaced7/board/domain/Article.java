@@ -23,7 +23,7 @@ public class Article extends BaseTimeEntity {
     @Column(nullable = false, length = MAX_CONTENT_LENGTH)
     private String content;
 
-    private boolean isActive = true;
+    private boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -52,7 +52,7 @@ public class Article extends BaseTimeEntity {
     }
 
     public void deactivate() {
-        isActive = false;
+        active = false;
     }
 
     @Override

@@ -13,11 +13,11 @@ import java.util.Optional;
 public interface MemberRepository extends JpaRepository<Member, Long> {
     public Member save(Member member);
 
-    @Query("select m from Member m where m.isActive = true")
+    @Query("select m from Member m where m.active = true")
     public Page<Member> findAll(Pageable pageable);
 
-    @Query("select m from Member m where m.isActive = :isActive")
-    public Page<Member> findAll(@Param("isActive") boolean isActive, Pageable pageable);
+    @Query("select m from Member m where m.active = :active")
+    public Page<Member> findAll(@Param("active") boolean active, Pageable pageable);
 
     @Query("select m from Member m where m.id = :id")
     public Optional<Member> findById(@Param("id") Long id);

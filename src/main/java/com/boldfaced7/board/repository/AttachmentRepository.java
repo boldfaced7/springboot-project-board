@@ -18,21 +18,21 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
     @Query("select a from Attachment a" +
             " join fetch a.article" +
-            " where a.id = :id and a.isActive = true")
+            " where a.id = :id and a.active = true")
     Optional<Attachment> findById(@Param("id") Long id);
 
     @Query("select a from Attachment a" +
             " join fetch a.article" +
-            " where a.storedName = :storedName and a.isActive = true")
+            " where a.storedName = :storedName and a.active = true")
     Optional<Attachment> findByStoredName(@Param("storedName") String storedName);
 
     @Query("select a from Attachment a" +
-            " where a.article = :article and a.isActive = true")
+            " where a.article = :article and a.active = true")
     List<Attachment> findAllByArticle(@Param("article") Article article);
 
     @Query("select a from Attachment a" +
             " join fetch a.article" +
-            " where a.isActive = true")
+            " where a.active = true")
     List<Attachment> findAll();
 
     @Modifying
@@ -42,7 +42,7 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
     @Modifying
     @Transactional
-    @Query("update Attachment a set a.isActive = false where a.article = :article")
+    @Query("update Attachment a set a.active = false where a.article = :article")
     int deactivateAttachments(@Param("article") Article article);
 
     @Modifying

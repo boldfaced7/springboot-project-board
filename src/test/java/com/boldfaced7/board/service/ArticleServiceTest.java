@@ -133,7 +133,7 @@ class ArticleServiceTest {
         valid.mocks(memberRepository, m -> m.findById(anyLong()), Optional.of(member()));
         valid.mocks(articleRepository, a -> a.save(any()), article());
         valid.mocks(attachmentRepository, a -> a.updateAttachments(any(), any()), 1);
-        valid.mocks(articleTicketRepository, a -> a.findAvailable(any(), any(), any()));
+        valid.mocks(articleTicketRepository, a -> a.findAvailable(any(), any(), any()), List.of(articleTicket()));
         valid.asserts(id -> assertThat(id).isEqualTo(1L));
 
         Context<Facade, ?> notFound = new Context<>("존재하지 않는 회원의 요청이면, 반환 없이 예외를 던짐");

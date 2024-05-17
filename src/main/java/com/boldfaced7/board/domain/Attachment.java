@@ -20,7 +20,7 @@ public class Attachment extends BaseTimeEntity {
     @Column(nullable = false)
     private String storedName;
 
-    private boolean isActive = true;
+    private boolean active = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id")
@@ -40,7 +40,7 @@ public class Attachment extends BaseTimeEntity {
     }
 
     public void deactivate() {
-        isActive = false;
+        active = false;
     }
 
     @Override

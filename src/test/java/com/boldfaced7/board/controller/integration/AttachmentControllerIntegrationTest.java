@@ -14,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
@@ -22,6 +23,7 @@ import java.util.stream.Stream;
 
 import static com.boldfaced7.board.TestUtil.*;
 
+@ActiveProfiles("test")
 @DisplayName("AttachmentController 통합 테스트")
 @SpringBootTest
 @AutoConfigureMockMvc

@@ -141,7 +141,7 @@ public class ArticleService {
 
     private ArticleTicket findAvailableArticleTicket(Member member) {
         LocalDateTime today = LocalDate.now().atStartOfDay();
-        return articleTicketRepository.findAvailable(member, today, today.plusDays(1))
+        return articleTicketRepository.findAvailable(member, today, today.plusDays(1)).stream().findFirst()
                 .orElseThrow(ArticleTicketNotFoundException::new);
     }
 

@@ -1,0 +1,64 @@
+server:
+  servlet:
+    session:
+      tracking-modes: cookie
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    hikari:
+      jdbc-url: jdbc:mysql://localhost:3306/board?useUnicode=yes&characterEncoding=UTF-8&rewriteBatchedStatements=true
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      maximum-pool-size: 10
+      max-lifetime: 30000
+      connection-timeout: 3000
+      username: abcd
+      password: 1234
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+  messages:
+    basename: validation-errors
+  sql:
+    init:
+      mode: always
+
+ticket:
+  total: 10
+file:
+  dir: C:\Projects\springboot-project-board\src\main\resources\attachments\
+---
+server:
+  servlet:
+    session:
+      tracking-modes: cookie
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS board;
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+  messages:
+    basename: validation-errors
+
+ticket:
+  total: 10
+file:
+  dir: C:\Projects\springboot-project-board\src\main\resources\attachments\

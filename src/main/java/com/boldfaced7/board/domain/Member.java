@@ -28,7 +28,7 @@ public class Member extends BaseTimeEntity {
     @Column(nullable = false, length = MAX_NICKNAME_LENGTH)
     private String nickname;
 
-    private boolean isActive = true;
+    private boolean active = true;
 
     protected Member() {}
 
@@ -53,7 +53,7 @@ public class Member extends BaseTimeEntity {
     }
 
     public void deactivate() {
-        isActive = false;
+        active = false;
     }
 
     @Override

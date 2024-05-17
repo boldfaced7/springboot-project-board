@@ -17,16 +17,16 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
     @Query("select a from Article a" +
             " join fetch a.member" +
-            " where a.id = :id and a.isActive = true")
+            " where a.id = :id and a.active = true")
     public Optional<Article> findById(@Param("id") Long id);
 
     @Query("select a from Article a" +
             " join fetch a.member" +
-            " where a.isActive = true")
+            " where a.active = true")
     public Page<Article> findAll(Pageable pageable);
 
     @Query("select a from Article a" +
             " where a.member = :member" +
-                " and a.isActive = true")
+                " and a.active = true")
     public Page<Article> findAllByMember(@Param("member") Member member, Pageable pageable);
 }

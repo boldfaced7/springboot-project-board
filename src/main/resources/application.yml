@@ -41,6 +41,24 @@ server:
 spring:
   config:
     activate:
+      on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  messages:
+    basename: validation-errors
+  sql:
+    init:
+      mode: always
+---
+server:
+  servlet:
+    session:
+      tracking-modes: cookie
+spring:
+  config:
+    activate:
       on-profile: test
   datasource:
     url: jdbc:h2:mem:test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS board;

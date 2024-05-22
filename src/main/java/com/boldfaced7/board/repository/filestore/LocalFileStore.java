@@ -4,6 +4,7 @@ import com.boldfaced7.board.domain.Attachment;
 import com.boldfaced7.board.error.ErrorCode;
 import com.boldfaced7.board.error.exception.BusinessBaseException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Profile({"local", "test"})
 @Component
 public class LocalFileStore implements FileStore {
 
@@ -60,7 +62,7 @@ public class LocalFileStore implements FileStore {
             Files.copy(multipartFile.getInputStream(), targetLocation);
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return Attachment.builder().build();
         }
         return Attachment.builder().uploadedName(uploadedName).storedName(storedName).build();
     }

@@ -1,7 +1,10 @@
 package com.boldfaced7.board.controller;
 
 import com.boldfaced7.board.Mocker;
-import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.auth.AuthInfoHolder;
+import com.boldfaced7.board.auth.interceptor.jwt.JwtAuthInfoHoldInterceptor;
+import com.boldfaced7.board.auth.interceptor.jwt.JwtLoginSuccessInterceptor;
+import com.boldfaced7.board.config.WebConfig;
 import com.boldfaced7.board.dto.ArticleDto;
 import com.boldfaced7.board.dto.CustomPage;
 import com.boldfaced7.board.dto.MemberDto;
@@ -21,6 +24,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,7 +37,13 @@ import static com.boldfaced7.board.TestUtil.*;
 import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("ArticleController 테스트")
-@WebMvcTest({ArticleController.class})
+@WebMvcTest(
+        value = ArticleController.class,
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = WebConfig.class),
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthInfoHoldInterceptor.class),
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtLoginSuccessInterceptor.class)}
+)
 class ArticleControllerTest {
 
     @Autowired MockMvc mvc;
@@ -43,7 +54,7 @@ class ArticleControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        AuthInfoHolder.setAuthInfo(authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, articleService);
     }
 

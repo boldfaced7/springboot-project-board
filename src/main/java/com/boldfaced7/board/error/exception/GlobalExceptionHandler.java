@@ -6,7 +6,6 @@ import com.boldfaced7.board.error.exception.member.MemberEmailDuplicatedExceptio
 import com.boldfaced7.board.error.exception.member.MemberNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;

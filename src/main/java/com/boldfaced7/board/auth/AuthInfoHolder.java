@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AuthInfoHolder {
-    private static ThreadLocal<AuthResponse> authInfo = new ThreadLocal<>();
+    private static final ThreadLocal<AuthResponse> authInfo = new ThreadLocal<>();
 
     public static void setAuthInfo(AuthResponse authResponse) {
         authInfo.set(authResponse);

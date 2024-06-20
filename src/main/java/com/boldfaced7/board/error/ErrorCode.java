@@ -16,6 +16,7 @@ public enum ErrorCode {
     NOT_FOUND(HttpStatus.NOT_FOUND, "ERROR006", "리소스를 찾을 수 없습니다."),
 
     INVALID_AUTH_VALUE(HttpStatus.UNAUTHORIZED, "AUTH001", "ID/PW가 올바르지 않습니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH002", "다시 로그인해주세요."),
 
     ARTICLE_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLE001", "존재하지 않는 게시글입니다."),
     ARTICLE_COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "ARTICLECOMMNET001", "존재하지 않는 댓글입니다."),

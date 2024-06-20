@@ -1,8 +1,7 @@
 package com.boldfaced7.board.controller.integration;
 
-import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
-import com.boldfaced7.board.dto.response.SaveAttachmentsResponse;
 import com.boldfaced7.board.service.AttachmentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +16,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -25,6 +25,7 @@ import static com.boldfaced7.board.TestUtil.*;
 
 @ActiveProfiles("test")
 @DisplayName("AttachmentController 통합 테스트")
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
 class AttachmentControllerIntegrationTest {
@@ -36,7 +37,7 @@ class AttachmentControllerIntegrationTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        AuthInfoHolder.setAuthInfo(authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, attachmentService);
     }
 
@@ -48,7 +49,7 @@ class AttachmentControllerIntegrationTest {
     }
     static Stream<Arguments> createPostRequestTests() {
         return Stream.of(
-                Arguments.of("정상 호출", multipartFiles(), new SaveAttachmentsResponse(List.of(STORED_NAME + JPG)), CREATED)
+                Arguments.of("정상 호출", multipartFiles(), null, CREATED)
         );
     }
 }

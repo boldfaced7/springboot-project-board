@@ -1,10 +1,13 @@
 package com.boldfaced7.board.controller.integration;
 
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
 import com.boldfaced7.board.dto.request.SaveArticleRequest;
 import com.boldfaced7.board.dto.request.UpdateArticleRequest;
+import com.boldfaced7.board.repository.ArticleTicketRepository;
 import com.boldfaced7.board.service.ArticleService;
+import com.boldfaced7.board.service.ArticleTicketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,6 +20,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Stream;
 
@@ -24,6 +28,7 @@ import static com.boldfaced7.board.TestUtil.*;
 
 @ActiveProfiles("test")
 @DisplayName("ArticleController 통합 테스트")
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
 class ArticleControllerIntegrationTest {
@@ -35,7 +40,7 @@ class ArticleControllerIntegrationTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        AuthInfoHolder.setAuthInfo(authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, articleService);
     }
 

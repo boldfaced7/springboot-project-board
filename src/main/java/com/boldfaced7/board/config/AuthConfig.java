@@ -10,13 +10,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Configuration
 public class AuthConfig {
 
-    @Profile("prod") @Bean
-    public PasswordEncoder passwordEncoder() {
+    @Bean @Profile("prod")
+    public PasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    @Profile({"local", "test"}) @Bean
-    public PasswordEncoder passwordEncoderForTest() {
+    @Bean @Profile({"local", "test"})
+    public PasswordEncoder noOpPasswordEncoder() {
         return new NoOpPasswordEncoder();
     }
 }

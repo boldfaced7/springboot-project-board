@@ -21,6 +21,7 @@ import java.util.List;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 
 @Setter
 @Builder
@@ -54,6 +55,7 @@ public class ControllerTestTemplate<S> {
         validateResponse(resultActions, response);
     }
     public <T> void doGet(String url, ResultMatcher status, T response) throws Exception {
+
         ResultActions resultActions = mvc.perform(get(url).session(session))
                 .andDo(print())
                 .andExpect(status)

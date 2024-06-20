@@ -1,6 +1,6 @@
 package com.boldfaced7.board.controller.integration;
 
-import com.boldfaced7.board.auth.SessionConst;
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
 import com.boldfaced7.board.dto.request.AuthRequest;
 import com.boldfaced7.board.service.AuthService;
@@ -16,6 +16,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Stream;
 
@@ -24,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
 @DisplayName("AuthController 통합 테스트")
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest {
@@ -35,7 +37,6 @@ class AuthControllerIntegrationTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, authService);
     }
 
@@ -48,7 +49,7 @@ class AuthControllerIntegrationTest {
     }
     static Stream<Arguments> createLoginRequestTests() {
         return Stream.of(
-                Arguments.of("정상 호출", EMAIL, PASSWORD, OK),
+                Arguments.of("정상 호출", EMAIL, PASSWORD, FOUND),
                 Arguments.of("비정상 호출: 이메일 불일치", "wrong" + EMAIL, PASSWORD, UNAUTHORIZED),
                 Arguments.of("비정상 호출: 비밀번호 불일치", EMAIL, "wrong" + PASSWORD, UNAUTHORIZED),
                 Arguments.of("비정상 호출: 이메일 누락", "", PASSWORD, BAD_REQUEST),
@@ -63,9 +64,10 @@ class AuthControllerIntegrationTest {
     @ParameterizedTest(name = "{index}: {0}")
     @MethodSource("createLogoutRequestTests")
     void logoutTest(String ignoredMessage, ResultMatcher status) throws Exception {
-        assertThat(session.isInvalid()).isFalse();
-        testTemplate.doGet(logoutUrl(), status);
-        assertThat(session.isInvalid()).isTrue();
+        AuthInfoHolder.setAuthInfo(authResponse());
+        assertThat(AuthInfoHolder.isEmpty()).isFalse();
+        testTemplate.doPost(logoutUrl(), null, status);
+        assertThat(AuthInfoHolder.isEmpty()).isTrue();
     }
     static Stream<Arguments> createLogoutRequestTests() {
         return Stream.of(

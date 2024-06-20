@@ -1,5 +1,6 @@
 package com.boldfaced7.board.controller.integration;
 
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.controller.ControllerTestTemplate;
 import com.boldfaced7.board.dto.request.SaveMemberRequest;
@@ -18,6 +19,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Stream;
 
@@ -25,6 +27,7 @@ import static com.boldfaced7.board.TestUtil.*;
 
 @ActiveProfiles("test")
 @DisplayName("MemberController 단위 테스트")
+@Transactional
 @SpringBootTest
 @AutoConfigureMockMvc
 class MemberControllerIntegrationTest {
@@ -36,7 +39,7 @@ class MemberControllerIntegrationTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        AuthInfoHolder.setAuthInfo(authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, memberService);
     }
 

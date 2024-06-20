@@ -1,6 +1,7 @@
 package com.boldfaced7.board.controller;
 
 import com.boldfaced7.board.Mocker;
+import com.boldfaced7.board.auth.AuthInfoHolder;
 import com.boldfaced7.board.auth.SessionConst;
 import com.boldfaced7.board.dto.ArticleCommentDto;
 import com.boldfaced7.board.dto.ArticleDto;
@@ -44,7 +45,7 @@ class ArticleCommentControllerTest {
     @BeforeEach
     void setSessionAndTestTemplate() {
         session = new MockHttpSession();
-        session.setAttribute(SessionConst.AUTH_RESPONSE, authResponse());
+        AuthInfoHolder.setAuthInfo(authResponse());
         testTemplate = new ControllerTestTemplate<>(mvc, session, articleCommentService);
     }
 

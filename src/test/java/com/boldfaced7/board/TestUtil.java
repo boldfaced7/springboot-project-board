@@ -38,6 +38,7 @@ public class TestUtil {
 
     public static final ResultMatcher OK = status().isOk();
     public static final ResultMatcher CREATED = status().isCreated();
+    public static final ResultMatcher FOUND = status().isFound();
     public static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
     public static final ResultMatcher BAD_REQUEST = status().isBadRequest();
     public static final ResultMatcher NOT_FOUND = status().isNotFound();

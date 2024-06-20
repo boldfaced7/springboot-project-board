@@ -22070,4 +22070,4 @@ insert into article_comment (article_comment_id, content, active, created_at, mo
 insert into article_comment (article_comment_id, content, active, created_at, modified_at, member_id, article_id) values (998, 'Duis at velit eu est congue elementum.', true, '2023-07-26 23:12:15', '2023-06-29 06:48:22', 998, 998);
 insert into article_comment (article_comment_id, content, active, created_at, modified_at, member_id, article_id) values (999, 'Sed vel enim sit amet nunc viverra dapibus.', true, '2024-01-14 23:16:49', '2023-04-15 03:49:42', 999, 999);
 insert into article_comment (article_comment_id, content, active, created_at, modified_at, member_id, article_id) values (1000, 'Curabitur convallis.', true, '2023-11-22 16:51:02', '2023-09-22 15:29:21', 1000, 1000);
-insert into article_ticket (article_ticket_id, member_id, used, created_at, modified_at) values (1, 1, false, '2024-05-21 16:51:02', '2024-05-21 16:51:02');
+insert into article_ticket (article_ticket_id, member_id, used, created_at, modified_at) values (1, 1, false, NOW(), NOW());

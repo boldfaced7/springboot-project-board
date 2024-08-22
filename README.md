@@ -210,16 +210,17 @@ public class ArticleTicketService {
     }
 
     private long confirmTicket(ArticleTicket saved) {
-        // 상태 확정 대상 티켓의 발급 순서를 확인하기 위해, 전날 제일 마지막으로 발급된 티켓의 id 조회
+        // 상태 확정 대상 티켓의 발급 순서를 확인하기 위해, 전날 기준 가장 마지막 티켓 데이터의 id 조회
         Long criteria = articleTicketRepository
                 .findCriteria(LocalDate.now().atStartOfDay()).orElse(0L);
 
-        // 상태 확정 대상 티켓의 발급 순서가 총 발급 티켓의 수를 초과하면, 대상 티켓 데이터 제거
+        // 상태 확정 대상 티켓의 발급 순서가 총 발급 티켓의 수를 초과하면, 에러를 던짐
         if (criteria + totalTicket < saved.getId()) {
             soldOutChecker.put(LocalDate.now(), true);
-            articleTicketRepository.delete(saved);
             throw new ArticleTicketSoldOutException();
         }
+        // 확정 가능 티켓을 확정 처리
+        saved.confirmTicket();
         return saved.getId();
     }
     // ...

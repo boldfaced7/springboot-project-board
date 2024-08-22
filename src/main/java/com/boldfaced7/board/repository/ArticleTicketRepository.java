@@ -25,16 +25,19 @@ public interface ArticleTicketRepository extends Repository<ArticleTicket, Long>
             " where a.member = :member" +
             " and a.createdAt >= :from " +
             " and a.createdAt < :to" +
-            " and a.used = false")
+            " and a.used = false" +
+            " and a.confirmed = true")
     List<ArticleTicket> findAvailable(@Param("member") Member member, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("select a from ArticleTicket a" +
-            " where a.member = :member")
+            " where a.member = :member" +
+            " and a.confirmed = true")
     Page<ArticleTicket> findAllByMember(Pageable pageable, @Param("member") Member member);
 
     @Query("select a from ArticleTicket a" +
             " where a.createdAt >= :from" +
             " and a.createdAt < :to" +
+            " and a.confirmed = true" +
             " order by a.createdAt")
     Page<ArticleTicket> findAllByDate(Pageable pageable, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
@@ -46,6 +49,7 @@ public interface ArticleTicketRepository extends Repository<ArticleTicket, Long>
     @Query("select COUNT(a) from ArticleTicket a" +
             " where a.createdAt >= :from" +
             " and a.createdAt < :to" +
+            " and a.confirmed = true" +
             " order by a.createdAt")
     int countArticleTicketByDate(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

@@ -16,6 +16,7 @@ public class ArticleTicket extends BaseTimeEntity {
     private Long id;
 
     private boolean used = false;
+    private boolean confirmed = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -33,6 +34,9 @@ public class ArticleTicket extends BaseTimeEntity {
     }
     public void useTicket() {
         used = true;
+    }
+    public void confirmTicket() {
+        confirmed = true;
     }
 
     @Override

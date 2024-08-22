@@ -104,15 +104,15 @@ public class ArticleTicketService {
 
         if (criteria + totalTicket < saved.getId()) {
             soldOutChecker.put(LocalDate.now(), true);
-            articleTicketRepository.delete(saved);
             throw new ArticleTicketSoldOutException();
         }
+        saved.confirmTicket();
         return saved.getId();
     }
 
     private Member findMemberByAuthInfo() {
-        AuthResponse authInfo = AuthInfoHolder.getAuthInfo();
-        return memberRepository.findById(authInfo.getMemberId())
+        Long memberId = AuthInfoHolder.getAuthInfo().getMemberId();
+        return memberRepository.findById(memberId)
                 .orElseThrow(MemberNotFoundException::new);
     }
     private Member findMemberById(Long memberId) {

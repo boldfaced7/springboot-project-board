@@ -22,24 +22,54 @@
 
 ```
 main/java/com/boldfaced7/board
-
-├── auth // 인증
-│   ├── interceptor
-│      ├── jwt
-│      └── session
-│   └── jwt
-├── config        // 설정 관련(AWS, Cache, DB, JPA ..)
-├── controller    // 컨트롤러
-├── domain        // 도메인
-├── dto
-│   ├── request
-│   └── response
-├── error         // 커스텀 예외 및 에러 클래스
-│   └── exception
-├── repository    // 리포지토리
-│   └── filestore // 이미지 저장 관련 클래스
-├── service       // 서비스
-└── resources
+├── article
+│   ├── application
+│   ├── domain
+│   ├── infrastructure
+│   └── presentation
+│       ├── request
+│       └── response
+├── attachment
+│   ├── application
+│   ├── domain
+│   ├── infrastructure
+│   └── presentation
+│       ├── request
+│       └── response
+├── comment
+│   ├── application
+│   ├── domain
+│   ├── infrastructure
+│   └── presentation
+│       ├── request
+│       └── response
+├── common
+│   ├── auth // 인증
+│   │   ├── application
+│   │   ├── interceptor
+│   │   │   ├── jwt
+│   │   │   └── session
+│   │   ├── jwt
+│   │   └── presentation
+│   │       ├── request
+│   │       └── response
+│   ├── config    // 설정 관련(AWS, Cache, DB, JPA ..)
+│   └── exception // 커스텀 예외 및 에러 클래스
+├── member
+│   ├── application
+│   ├── domain
+│   ├── infrastructure
+│   │   └── filestore // 이미지 저장 관련 클래스
+│   └── presentation
+│       ├── request
+│       └── response
+└── ticket
+    ├── application
+    ├── domain
+    ├── infrastructure
+    └── presentation
+        ├── request
+        └── response
 ```
 
 # ERD

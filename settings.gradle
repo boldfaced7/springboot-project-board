@@ -1,1 +1,9 @@
-rootProject.name = 'board'
+rootProject.name = 'springboot-project-board'
+
+include 'module-api'
+include 'module-article'
+include 'module-article-comment'
+include 'module-article-ticket'
+include 'module-attachment'
+include 'module-common'
+include 'module-member'

@@ -1,0 +1,1 @@
+insert into article_ticket (article_ticket_id, member_id, used, created_at, modified_at) values (1, 1, false, NOW(), NOW());

@@ -1,68 +1,85 @@
 package com.boldfaced7.domain;
 
-import com.boldfaced7.common.BaseTimeEntity;
-import com.boldfaced7.member.domain.Member;
-import com.boldfaced7.article.domain.Article;
-import jakarta.persistence.*;
-import lombok.Builder;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.Objects;
+import java.time.LocalDateTime;
 
 @Getter
-@Entity
-public class ArticleComment extends BaseTimeEntity {
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class ArticleComment {
+    private final String id;
+    private final String articleId;
+    private final String memberId;
+    private final String content;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
+    private final LocalDateTime deletedAt;
 
-    public static final int MAX_CONTENT_LENGTH = 1000;
-
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "article_comment_id")
-    private Long id;
-
-    @Column(nullable = false, length = MAX_CONTENT_LENGTH)
-    private String content;
-
-    private boolean active = true;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "article_id")
-    private Article article;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
-
-    protected ArticleComment() {}
-
-    @Builder
-    public ArticleComment(String content, Article article, Member member) {
-        this.content = content;
-        this.article = article;
-        this.member = member;
+    public static ArticleComment generate(
+            ArticleId articleId,
+            MemberId memberId,
+            Content content
+    ) {
+        return new ArticleComment(
+                null,
+                articleId.value(),
+                memberId.value(),
+                content.value(),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null
+        );
     }
 
-    public void updateContent(String content) {
-        this.content = content;
+    public static ArticleComment generate(
+            Id id,
+            ArticleId articleId,
+            MemberId memberId,
+            Content content,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            LocalDateTime deletedAt
+
+    ) {
+        return new ArticleComment(
+                id.value(),
+                articleId.value(),
+                memberId.value(),
+                content.value(),
+                createdAt,
+                updatedAt,
+                deletedAt
+        );
     }
 
-    public void update(ArticleComment articleComment) {
-        updateContent(articleComment.getContent());
+    public ArticleComment update(Content content) {
+        return new ArticleComment(
+                this.id,
+                this.articleId,
+                this.memberId,
+                content.value(),
+                this.createdAt,
+                LocalDateTime.now(),
+                this.deletedAt
+        );
     }
 
-    public void deactivate() {
-        active = false;
+    public ArticleComment delete() {
+        return new ArticleComment(
+                this.id,
+                this.articleId,
+                this.memberId,
+                this.content,
+                this.createdAt,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ArticleComment that = (ArticleComment) o;
-        return Objects.equals(id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
+    public record Id(String value) {}
+    public record ArticleId(String value) {}
+    public record MemberId(String value) {}
+    public record Content(String value) {}
 }

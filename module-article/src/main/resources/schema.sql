@@ -1,4 +1,4 @@
-create table `board`.`article` (
+create table `board`.`articleJpaEntity` (
     `article_id` BIGINT(20) NOT NULL AUTO_INCREMENT,
     `member_id` BIGINT(20) NOT NULL COMMENT '회원 ID',
     `active` BIT NOT NULL COMMENT '게시글 데이터 상태',

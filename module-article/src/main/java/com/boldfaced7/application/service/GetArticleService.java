@@ -1,10 +1,13 @@
 package com.boldfaced7.application.service;
 
+import com.boldfaced7.Query;
 import com.boldfaced7.application.port.in.GetArticleCommand;
 import com.boldfaced7.application.port.in.GetArticleQuery;
 import com.boldfaced7.application.port.out.*;
+import com.boldfaced7.application.port.out.GetMemberInfoPort;
+import com.boldfaced7.application.port.out.GetMemberInfoRequest;
+import com.boldfaced7.application.port.out.GetMemberInfoResponse;
 import com.boldfaced7.domain.Article;
-import com.boldfaced7.Query;
 import com.boldfaced7.domain.ResolvedArticle;
 import com.boldfaced7.exception.article.ArticleNotFoundException;
 import com.boldfaced7.exception.member.MemberNotFoundException;
@@ -17,13 +20,13 @@ import java.util.List;
 public class GetArticleService implements GetArticleQuery {
 
     private final FindArticlePort findArticlePort;
-    private final FindMemberPort findMemberPort;
+    private final GetMemberInfoPort getMemberInfoPort;
     private final ListAttachmentsPort listAttachmentsPort;
 
     @Override
     public ResolvedArticle getArticle(GetArticleCommand command) {
         Article found = getArticle(command.articleId());
-        FindMemberResponse memberResponse = getMemberResponse(found.getMemberId());
+        GetMemberInfoResponse memberResponse = getMemberResponse(found.getMemberId());
         List<String> attachmentUrls = getAttachmentUrls(command.articleId());
 
         return ResolvedArticle.resolve(
@@ -40,9 +43,9 @@ public class GetArticleService implements GetArticleQuery {
                 .orElseThrow(ArticleNotFoundException::new);
     }
 
-    private FindMemberResponse getMemberResponse(String memberId) {
-        FindMemberRequest request = new FindMemberRequest(memberId);
-        return findMemberPort.getMember(request)
+    private GetMemberInfoResponse getMemberResponse(String memberId) {
+        GetMemberInfoRequest request = new GetMemberInfoRequest(memberId);
+        return getMemberInfoPort.getMember(request)
                 .orElseThrow(MemberNotFoundException::new);
     }
 

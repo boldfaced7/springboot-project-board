@@ -2,7 +2,7 @@ package com.boldfaced7.application.service;
 
 import com.boldfaced7.ArticleTestUtil;
 import com.boldfaced7.application.port.in.ListArticlesCommand;
-import com.boldfaced7.application.port.out.ListMembersResponse;
+import com.boldfaced7.application.port.out.ListMembersInfoResponse;
 import com.boldfaced7.domain.ResolvedArticle;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ class ListArticlesServiceTest {
         var dummy = List.of(article(ID, MEMBER_ID, TITLE, CONTENT));
         var sut = new ListArticlesService(
                 (pageNumber, pageSize) -> dummy,
-                request -> new ListMembersResponse(List.of(NICKNAME))
+                request -> new ListMembersInfoResponse(List.of(NICKNAME))
         );
         var command = new ListArticlesCommand(PAGE_NUMBER);
 

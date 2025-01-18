@@ -1,10 +1,13 @@
 package com.boldfaced7.application.service;
 
-import com.boldfaced7.application.port.out.*;
+import com.boldfaced7.Query;
 import com.boldfaced7.application.port.in.ListMemberArticlesCommand;
 import com.boldfaced7.application.port.in.ListMemberArticlesQuery;
+import com.boldfaced7.application.port.out.GetMemberInfoPort;
+import com.boldfaced7.application.port.out.GetMemberInfoRequest;
+import com.boldfaced7.application.port.out.GetMemberInfoResponse;
+import com.boldfaced7.application.port.out.ListMemberArticlesPort;
 import com.boldfaced7.domain.Article;
-import com.boldfaced7.Query;
 import com.boldfaced7.domain.ResolvedArticle;
 import com.boldfaced7.exception.member.MemberNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +20,7 @@ public class ListMemberArticlesService implements ListMemberArticlesQuery {
 
     private static final int PAGE_SIZE = 20;
 
-    private final FindMemberPort findMemberPort;
+    private final GetMemberInfoPort getMemberInfoPort;
     private final ListMemberArticlesPort listMemberArticlesPort;
 
     @Override
@@ -28,9 +31,9 @@ public class ListMemberArticlesService implements ListMemberArticlesQuery {
     }
 
     private String getNickname(String memberId) {
-        FindMemberRequest request = new FindMemberRequest(memberId);
-        return findMemberPort.getMember(request)
-                .map(FindMemberResponse::nickname)
+        GetMemberInfoRequest request = new GetMemberInfoRequest(memberId);
+        return getMemberInfoPort.getMember(request)
+                .map(GetMemberInfoResponse::nickname)
                 .orElseThrow(MemberNotFoundException::new);
     }
 

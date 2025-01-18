@@ -2,7 +2,7 @@ package com.boldfaced7.application.service;
 
 import com.boldfaced7.ArticleTestUtil;
 import com.boldfaced7.application.port.in.ListMemberArticlesCommand;
-import com.boldfaced7.application.port.out.FindMemberResponse;
+import com.boldfaced7.application.port.out.GetMemberInfoResponse;
 import com.boldfaced7.domain.ResolvedArticle;
 import com.boldfaced7.exception.member.MemberNotFoundException;
 import org.assertj.core.api.Assertions;
@@ -22,7 +22,7 @@ class ListMemberArticlesServiceTest {
         // given
         var dummy = List.of(article(ID, MEMBER_ID, TITLE, CONTENT));
         var sut = new ListMemberArticlesService(
-                request -> Optional.of(new FindMemberResponse(MEMBER_ID, EMAIL, NICKNAME)),
+                request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, EMAIL, NICKNAME)),
                 (memberId, pageSize, pageNumber) -> dummy
         );
         var command = new ListMemberArticlesCommand(MEMBER_ID, PAGE_NUMBER);

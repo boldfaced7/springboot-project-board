@@ -1,10 +1,12 @@
 package com.boldfaced7.application.service;
 
-import com.boldfaced7.application.port.out.*;
+import com.boldfaced7.UseCase;
 import com.boldfaced7.application.port.in.PostArticleCommand;
 import com.boldfaced7.application.port.in.PostArticleUseCase;
+import com.boldfaced7.application.port.out.*;
+import com.boldfaced7.application.port.out.GetMemberInfoPort;
+import com.boldfaced7.application.port.out.GetMemberInfoRequest;
 import com.boldfaced7.domain.Article;
-import com.boldfaced7.UseCase;
 import com.boldfaced7.exception.articleticket.ArticleTicketNotFoundException;
 import com.boldfaced7.exception.member.MemberNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +19,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class PostArticleService implements PostArticleUseCase {
 
-    private final FindMemberPort findMemberPort;
+    private final GetMemberInfoPort getMemberInfoPort;
     private final ConsumeArticleTicketPort consumeArticleTicketPort;
     private final SaveArticlePort saveArticlePort;
 
@@ -29,7 +31,7 @@ public class PostArticleService implements PostArticleUseCase {
     }
 
     private void ensureMemberExists(String memberId) {
-        findMemberPort.getMember(new FindMemberRequest(memberId))
+        getMemberInfoPort.getMember(new GetMemberInfoRequest(memberId))
                 .orElseThrow(MemberNotFoundException::new);
     }
 

@@ -2,7 +2,7 @@ package com.boldfaced7.application.service;
 
 import com.boldfaced7.application.port.in.PostArticleCommand;
 import com.boldfaced7.application.port.out.ConsumeArticleTicketResponse;
-import com.boldfaced7.application.port.out.FindMemberResponse;
+import com.boldfaced7.application.port.out.GetMemberInfoResponse;
 import com.boldfaced7.exception.articleticket.ArticleTicketNotFoundException;
 import com.boldfaced7.exception.member.MemberNotFoundException;
 import org.assertj.core.api.Assertions;
@@ -20,7 +20,7 @@ class PostArticleServiceTest {
     void givenPostArticleCommand_whenSaving_thenReturnsSavedArticle() {
         // given
         var sut = new PostArticleService(
-                request -> Optional.of(new FindMemberResponse(MEMBER_ID, EMAIL, NICKNAME)),
+                request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, EMAIL, NICKNAME)),
                 request -> Optional.of(new ConsumeArticleTicketResponse(MEMBER_ID, VALID)),
                 article -> setField(article, "id", ID)
         );
@@ -53,7 +53,7 @@ class PostArticleServiceTest {
     void givenNoArticleTicketAvailable_whenSaving_thenThrowsException() {
         // given
         var sut = new PostArticleService(
-                request -> Optional.of(new FindMemberResponse(MEMBER_ID, EMAIL, NICKNAME)),
+                request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, EMAIL, NICKNAME)),
                 request -> Optional.empty(),
                 null
         );

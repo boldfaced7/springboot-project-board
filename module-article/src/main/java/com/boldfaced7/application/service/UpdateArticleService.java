@@ -1,11 +1,11 @@
 package com.boldfaced7.application.service;
 
+import com.boldfaced7.UseCase;
 import com.boldfaced7.application.port.in.UpdateArticleCommand;
 import com.boldfaced7.application.port.in.UpdateArticleUseCase;
 import com.boldfaced7.application.port.out.FindArticlePort;
 import com.boldfaced7.application.port.out.UpdateArticlePort;
 import com.boldfaced7.domain.Article;
-import com.boldfaced7.UseCase;
 import com.boldfaced7.exception.article.ArticleNotFoundException;
 import com.boldfaced7.exception.auth.UnauthorizedException;
 import lombok.RequiredArgsConstructor;

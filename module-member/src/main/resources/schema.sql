@@ -1,4 +1,4 @@
-create table `board`.`member` (
+create table `board`.`memberJpa` (
     `member_id` BIGINT(20) NOT NULL AUTO_INCREMENT,
     `active` BIT NOT NULL COMMENT '회원 데이터 상태',
     `email` VARCHAR(254) NOT NULL COMMENT '이메일',

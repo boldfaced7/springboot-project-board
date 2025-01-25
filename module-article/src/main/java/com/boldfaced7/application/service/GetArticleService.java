@@ -21,7 +21,7 @@ public class GetArticleService implements GetArticleQuery {
 
     private final FindArticlePort findArticlePort;
     private final GetMemberInfoPort getMemberInfoPort;
-    private final ListAttachmentsPort listAttachmentsPort;
+    private final ListAttachmentsInfoPort listAttachmentsInfoPort;
 
     @Override
     public ResolvedArticle getArticle(GetArticleCommand command) {
@@ -50,7 +50,7 @@ public class GetArticleService implements GetArticleQuery {
     }
 
     private List<String> getAttachmentUrls(String articleId) {
-        ListAttachmentsRequest request = new ListAttachmentsRequest(articleId);
-        return listAttachmentsPort.listAttachments(request).attachmentUrls();
+        ListAttachmentsInfoRequest request = new ListAttachmentsInfoRequest(articleId);
+        return listAttachmentsInfoPort.listAttachments(request).attachmentUrls();
     }
 }

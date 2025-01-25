@@ -5,7 +5,6 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
-
     implementation project(':module-common')
+    implementation project(':module-member-adapter')
 }

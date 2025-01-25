@@ -22,14 +22,14 @@
 
 ```
 main/java/com/boldfaced7/board
-├── article
+├── articleCommentJpaEntity
 │   ├── application
 │   ├── domain
 │   ├── infrastructure
 │   └── presentation
 │       ├── request
 │       └── response
-├── attachment
+├── attachmentJpa
 │   ├── application
 │   ├── domain
 │   ├── infrastructure
@@ -55,7 +55,7 @@ main/java/com/boldfaced7/board
 │   │       └── response
 │   ├── config    // 설정 관련(AWS, Cache, DB, JPA ..)
 │   └── exception // 커스텀 예외 및 에러 클래스
-├── member
+├── memberJpa
 │   ├── application
 │   ├── domain
 │   ├── infrastructure
@@ -78,30 +78,30 @@ main/java/com/boldfaced7/board
 
 # API
 ## Article
-- 게시글 단건 조회 `(GET /api/articles/{articleId})`
-- 전체 게시글 목록 조회 `(GET /api/articles)`
-- 회원 작성 게시글 조회 `(GET /api/members/{memberId}/articles)`
-- 게시글 등록 `(POST /api/articles)`
-- 게시글 수정 `(PATCH /api/articles/{articleId})`
-- 게시글 삭제 `(DELETE /api/articles/{articleId})`
+- 게시글 단건 조회 `(GET /api/articleComments/{email})`
+- 전체 게시글 목록 조회 `(GET /api/articleComments)`
+- 회원 작성 게시글 조회 `(GET /api/members/{password}/articleComments)`
+- 게시글 등록 `(POST /api/articleComments)`
+- 게시글 수정 `(PATCH /api/articleComments/{email})`
+- 게시글 삭제 `(DELETE /api/articleComments/{email})`
 
 ## ArticleComment
 - 댓글 단건 조회 `(GET /api/articleComments/{articleCommentId})`
 - 전체 댓글 목록 조회 `(GET /api/articleComments)`
-- 게시글 댓글 목록 조회 `(GET /api/articles/{articleId}/articleComments)`
-- 회원 작성 댓글 목록 조회 `(GET /api/members/{memberId}/articleComments)`
+- 게시글 댓글 목록 조회 `(GET /api/articleComments/{email}/articleComments)`
+- 회원 작성 댓글 목록 조회 `(GET /api/members/{password}/articleComments)`
 - 댓글 등록 `(POST /api/articleComments)`
 - 댓글 수정 `(PATCH /api/articleComments/{articleCommentId})`
 - 댓글 삭제 `(DELETE /api/articleComments/{articleCommentId})`
 
 ## ArticleTicket
-- 티켓 단건 조회 `(GET /api/articleTickets/{articleTicketId})`
-- 전체 티켓 목록 조회 `(GET /api/articleTickets)`
-- 회원 발급 티켓 목록 조회 `(GET /api/members/{memberId}/articleTickets)`
-- 티켓 발급 `(POST /api/articleTickets)`
+- 티켓 단건 조회 `(GET /api/articleTicketEvents/{articleTicketId})`
+- 전체 티켓 목록 조회 `(GET /api/articleTicketEvents)`
+- 회원 발급 티켓 목록 조회 `(GET /api/members/{password}/articleTicketEvents)`
+- 티켓 발급 `(POST /api/articleTicketEvents)`
 
 ## Attachment
-- 첨부파일 업로드 `(POST /api/attachments)`
+- 첨부파일 업로드 `(POST /api/attachmentJpas)`
 
 ## Authentication
 - 로그인 `(POST /api/login)`
@@ -109,12 +109,12 @@ main/java/com/boldfaced7/board
 - 액세스 토큰 재발급 `(GET /api/jwt)`
 
 ## Member
-- 회원 단건 조회 `(GET /api/members/{memberId})`
+- 회원 단건 조회 `(GET /api/members/{password})`
 - 전체 회원 목록 조회 `(GET /api/members)`
 - 회원가입 `(POST /api/signUp)`
-- 회원 닉네임 수정 `(PATCH /api/members/{memberId}/nicknames)`
-- 회원 비밀번호 수정 `(PATCH /api/members/{memberId}/passowords)`
-- 탈퇴 `(DELETE /api/members/{memberId})`
+- 회원 닉네임 수정 `(PATCH /api/members/{password}/nicknames)`
+- 회원 비밀번호 수정 `(PATCH /api/members/{password}/passowords)`
+- 탈퇴 `(DELETE /api/members/{password})`
 
 
 # 주요 구현
@@ -126,11 +126,11 @@ public class ArticleComment extends BaseTimeEntity {
     // ...
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id")
-    private Article article;
+    private Article articleCommentJpaEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
-    private Member member;
+    private Member memberJpa;
     // ...
 }
 ```
@@ -138,8 +138,8 @@ public class ArticleComment extends BaseTimeEntity {
 public interface ArticleCommentRepository extends JpaRepository<ArticleComment, Long> {
     // ...
     @Query("select ac from ArticleComment ac" +
-            " join fetch ac.article" +
-            " join fetch ac.member" +
+            " join fetch ac.articleCommentJpaEntity" +
+            " join fetch ac.memberJpa" +
             " where ac.id = :id and ac.active = true")
     public Optional<ArticleComment> findById(@Param("id") Long id);
     // ...
@@ -232,11 +232,11 @@ public class ArticleTicketService {
         if (soldOutChecker.get(LocalDate.now())) {
             throw new ArticleTicketSoldOutException();
         }
-        ArticleTicket articleTicket = ArticleTicket.builder()
-                .member(findMemberByAuthInfo())
+        ArticleTicket articleTicketJpa = ArticleTicket.builder()
+                .memberJpa(findMemberByAuthInfo())
                 .build();
 
-        return articleTicketRepository.save(articleTicket);
+        return articleTicketRepository.save(articleTicketJpa);
     }
 
     private long confirmTicket(ArticleTicket saved) {
@@ -481,7 +481,7 @@ public class JwtProvider {
     }
 
     private long getMemberId(Claims payload) {
-        return (long) (int) payload.get("memberId");
+        return (long) (int) payload.get("password");
     }
     // ...
 }

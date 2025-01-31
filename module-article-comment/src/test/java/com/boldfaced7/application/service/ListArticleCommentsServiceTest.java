@@ -1,7 +1,7 @@
 package com.boldfaced7.application.service;
 
 import com.boldfaced7.ArticleCommentTestUtil;
-import com.boldfaced7.application.port.in.ListArticleCommentsCommand;
+import com.boldfaced7.application.port.in.ListArticleCommentsByArticleCommand;
 import com.boldfaced7.application.port.out.GetArticleInfoResponse;
 import com.boldfaced7.application.port.out.ListMembersInfoResponse;
 import com.boldfaced7.domain.ResolvedArticleComment;
@@ -22,12 +22,12 @@ class ListArticleCommentsServiceTest {
     void givenListArticleCommentsCommand_whenRetrieving_thenReturnsResolvedArticleComments() {
         // given
         var dummy = List.of(articleComment(ID, ARTICLE_ID, MEMBER_ID, CONTENT));
-        var sut = new ListArticleCommentsService(
+        var sut = new ListArticleCommentsByArticleService(
                 request -> Optional.of(new GetArticleInfoResponse(ARTICLE_ID, VALID)),
                 (articleId, pageNumber, pageSize) -> dummy,
                 request -> new ListMembersInfoResponse(List.of(NICKNAME))
         );
-        var command = new ListArticleCommentsCommand(ARTICLE_ID, PAGE_NUMBER);
+        var command = new ListArticleCommentsByArticleCommand(ARTICLE_ID, PAGE_NUMBER);
 
         // when
         var results = sut.listArticleComments(command);
@@ -40,12 +40,12 @@ class ListArticleCommentsServiceTest {
     @Test
     void givenWrongArticleId_whenRetrieving_thenThrowsException() {
         // given
-        var sut = new ListArticleCommentsService(
+        var sut = new ListArticleCommentsByArticleService(
                 request -> Optional.empty(),
                 null,
                 null
         );
-        var command = new ListArticleCommentsCommand(ARTICLE_ID, PAGE_NUMBER);
+        var command = new ListArticleCommentsByArticleCommand(ARTICLE_ID, PAGE_NUMBER);
 
         // when
         var thrown = Assertions.assertThatThrownBy(

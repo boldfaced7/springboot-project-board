@@ -1,6 +1,6 @@
 package com.boldfaced7.application.service;
 
-import com.boldfaced7.application.port.in.UpdateArticleTicketEventCommand;
+import com.boldfaced7.application.port.in.ChangeDisplayNameCommand;
 import com.boldfaced7.exception.articleticketevent.ArticleTicketEventNotFoundException;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -16,14 +16,14 @@ class UpdateArticleTicketEventServiceTest {
     @Test
     void givenUpdateArticleTicketEventCommand_whenUpdatingTicket_thenReturnsUpdatedArticleTicketEvent() {
         // given
-        var sut = new UpdateArticleTicketEventService(
+        var sut = new ChangeDisplayNameService(
                 id -> Optional.of(articleTicketEvent(ID, DISPLAY_NAME, EXPIRING_AT, ISSUE_LIMIT)),
                 ticket -> ticket
         );
-        var command = new UpdateArticleTicketEventCommand(ID, DISPLAY_NAME, MEMBER_ID);
+        var command = new ChangeDisplayNameCommand(ID, DISPLAY_NAME, MEMBER_ID);
 
         // when
-        var result = sut.updateDisplayName(command);
+        var result = sut.changeDisplayName(command);
 
         // then
         assertThat(result, ID, DISPLAY_NAME, EXPIRING_AT, ISSUE_LIMIT);
@@ -35,15 +35,15 @@ class UpdateArticleTicketEventServiceTest {
     @Test
     void givenWrongArticleTicketId_whenUpdatingTicket_thenThrowsException() {
         // given
-        var sut = new UpdateArticleTicketEventService(
+        var sut = new ChangeDisplayNameService(
                 id -> Optional.empty(),
                 null
         );
-        var command = new UpdateArticleTicketEventCommand(ID, DISPLAY_NAME, MEMBER_ID);
+        var command = new ChangeDisplayNameCommand(ID, DISPLAY_NAME, MEMBER_ID);
 
         // when
         var thrown = Assertions.assertThatThrownBy(
-                () -> sut.updateDisplayName(command)
+                () -> sut.changeDisplayName(command)
         );
         // then
         thrown.isInstanceOf(ArticleTicketEventNotFoundException.class);

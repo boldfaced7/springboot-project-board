@@ -1,7 +1,7 @@
 package com.boldfaced7.application.service;
 
 import com.boldfaced7.AttachmentTestUtil;
-import com.boldfaced7.application.port.in.ListMemberAttachmentsCommand;
+import com.boldfaced7.application.port.in.ListAttachmentsByMemberCommand;
 import com.boldfaced7.domain.ResolvedAttachment;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,11 +17,11 @@ class ListMemberAttachmentsServiceTest {
     void givenListAttachmentsCommand_whenRetrieving_thenReturnsResolvedAttachments() {
         // given
         var dummy = List.of(attachment(ID, ARTICLE_ID, MEMBER_ID, UPLOADED_NAME, STORED_NAME));
-        var sut = new ListMemberAttachmentsService(
+        var sut = new ListAttachmentsByMemberService(
                 (memberId, pageNumber, pageSize) -> dummy,
                 attachments -> ResolvedAttachment.resolveAll(dummy, List.of(URL))
         );
-        var command = new ListMemberAttachmentsCommand(MEMBER_ID, PAGE_NUMBER);
+        var command = new ListAttachmentsByMemberCommand(MEMBER_ID, PAGE_NUMBER);
 
         // when
         var results = sut.listMemberAttachments(command);

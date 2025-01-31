@@ -1,7 +1,7 @@
 package com.boldfaced7.application.service;
 
 import com.boldfaced7.ArticleCommentTestUtil;
-import com.boldfaced7.application.port.in.ListMemberArticleCommentsCommand;
+import com.boldfaced7.application.port.in.ListArticleCommentsByMemberCommand;
 import com.boldfaced7.application.port.out.GetMemberInfoResponse;
 import com.boldfaced7.domain.ResolvedArticleComment;
 import com.boldfaced7.exception.member.MemberNotFoundException;
@@ -21,14 +21,14 @@ class ListMemberArticleCommentsServiceTest {
     void givenListMemberArticleCommentsCommand_whenRetrieving_thenReturnsResolvedArticleComments() {
         // given
         var dummy = List.of(articleComment(ID, ARTICLE_ID, MEMBER_ID, CONTENT));
-        var sut = new ListMemberArticleCommentsService(
+        var sut = new ListArticleCommentsByMemberService(
                 request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, "", NICKNAME)),
                 (memberId, pageSize, pageNumber) -> dummy
         );
-        var command = new ListMemberArticleCommentsCommand(MEMBER_ID, PAGE_NUMBER);
+        var command = new ListArticleCommentsByMemberCommand(MEMBER_ID, PAGE_NUMBER);
 
         // when
-        var results = sut.listMemberArticleComments(command);
+        var results = sut.listArticleComments(command);
 
         // then
         results.forEach(this::assertThat);
@@ -38,15 +38,15 @@ class ListMemberArticleCommentsServiceTest {
     @Test
     void givenWrongMemberId_whenRetrieving_thenThrowException() {
         // given
-        var sut = new ListMemberArticleCommentsService(
+        var sut = new ListArticleCommentsByMemberService(
                 request -> Optional.empty(),
                 null
         );
-        var command = new ListMemberArticleCommentsCommand(MEMBER_ID, PAGE_NUMBER);
+        var command = new ListArticleCommentsByMemberCommand(MEMBER_ID, PAGE_NUMBER);
 
         // when
         var thrown = Assertions.assertThatThrownBy(
-                () -> sut.listMemberArticleComments(command)
+                () -> sut.listArticleComments(command)
         );
 
         // then

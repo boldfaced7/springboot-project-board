@@ -4,6 +4,7 @@ import com.boldfaced7.UseCase;
 import com.boldfaced7.application.port.in.RequestArticleTicketIssuingCommand;
 import com.boldfaced7.application.port.in.RequestArticleTicketIssuingUseCase;
 import com.boldfaced7.application.port.out.*;
+import com.boldfaced7.exception.articleticket.ArticleTicketSoldOutException;
 import lombok.RequiredArgsConstructor;
 
 @UseCase
@@ -13,9 +14,14 @@ public class RequestArticleTicketIssuingService implements RequestArticleTicketI
     private final ReduceAvailableTicketsPort reduceAvailableTicketsPort;
 
     @Override
-    public boolean requestIssuing(RequestArticleTicketIssuingCommand command) {
+    public void requestIssuing(RequestArticleTicketIssuingCommand command) {
         ReduceAvailableTicketsRequest request
                 = new ReduceAvailableTicketsRequest(command.ticketEventId());
-        return reduceAvailableTicketsPort.reduceAvailable(request).reduced();
+
+        boolean reduced = reduceAvailableTicketsPort.reduceAvailable(request).reduced();
+
+        if (!reduced) {
+            throw new ArticleTicketSoldOutException();
+        }
     }
 }

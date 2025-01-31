@@ -1,6 +1,5 @@
 rootProject.name = 'springboot-project-board'
 
-include 'module-api'
 include 'module-article'
 include 'module-article-comment'
 include 'module-article-ticket'

@@ -1,8 +1,8 @@
 package com.boldfaced7.adapter.in.web;
 
 import com.boldfaced7.WebAdapter;
-import com.boldfaced7.application.port.in.ListMemberArticlesCommand;
-import com.boldfaced7.application.port.in.ListMemberArticlesQuery;
+import com.boldfaced7.application.port.in.ListArticlesByMemberCommand;
+import com.boldfaced7.application.port.in.ListArticlesByMemberQuery;
 import com.boldfaced7.domain.ResolvedArticle;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ListArticlesByMemberController {
 
-    private final ListMemberArticlesQuery listMemberArticlesQuery;
+    private final ListArticlesByMemberQuery listArticlesByMemberQuery;
 
     @GetMapping("/members/{memberId}/articles")
     public ResponseEntity<List<ListMemberArticlesResponse>> listMemberArticles(
@@ -30,8 +30,8 @@ public class ListArticlesByMemberController {
     }
 
     private List<ResolvedArticle> getResolvedArticles(String memberId, int page) {
-        ListMemberArticlesCommand command = new ListMemberArticlesCommand(memberId, page);
-        return listMemberArticlesQuery.listMemberArticles(command);
+        ListArticlesByMemberCommand command = new ListArticlesByMemberCommand(memberId, page);
+        return listArticlesByMemberQuery.listMemberArticles(command);
     }
 
     private List<ListMemberArticlesResponse> toResponse(List<ResolvedArticle> articles) {

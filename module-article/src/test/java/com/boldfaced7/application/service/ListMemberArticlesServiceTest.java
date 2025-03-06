@@ -1,7 +1,7 @@
 package com.boldfaced7.application.service;
 
 import com.boldfaced7.ArticleTestUtil;
-import com.boldfaced7.application.port.in.ListMemberArticlesCommand;
+import com.boldfaced7.application.port.in.ListArticlesByMemberCommand;
 import com.boldfaced7.application.port.out.GetMemberInfoResponse;
 import com.boldfaced7.domain.ResolvedArticle;
 import com.boldfaced7.exception.member.MemberNotFoundException;
@@ -21,11 +21,11 @@ class ListMemberArticlesServiceTest {
     void givenListMemberArticlesCommand_whenRetrieving_thenReturnsResolvedArticles() {
         // given
         var dummy = List.of(article(ID, MEMBER_ID, TITLE, CONTENT));
-        var sut = new ListMemberArticlesService(
+        var sut = new ListArticlesByMemberService(
                 request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, EMAIL, NICKNAME)),
                 (memberId, pageSize, pageNumber) -> dummy
         );
-        var command = new ListMemberArticlesCommand(MEMBER_ID, PAGE_NUMBER);
+        var command = new ListArticlesByMemberCommand(MEMBER_ID, PAGE_NUMBER);
 
         // when
         var results = sut.listMemberArticles(command);
@@ -38,8 +38,8 @@ class ListMemberArticlesServiceTest {
     @Test
     void givenWrongMemberId_whenRetrieving_thenThrowException() {
         // given
-        var sut = new ListMemberArticlesService(request -> Optional.empty(), null);
-        var command = new ListMemberArticlesCommand(MEMBER_ID, PAGE_NUMBER);
+        var sut = new ListArticlesByMemberService(request -> Optional.empty(), null);
+        var command = new ListArticlesByMemberCommand(MEMBER_ID, PAGE_NUMBER);
 
         // when
         var thrown = Assertions.assertThatThrownBy(

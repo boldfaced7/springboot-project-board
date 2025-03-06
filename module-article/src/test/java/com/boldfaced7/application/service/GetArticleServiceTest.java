@@ -2,7 +2,7 @@ package com.boldfaced7.application.service;
 
 import com.boldfaced7.application.port.in.GetArticleCommand;
 import com.boldfaced7.application.port.out.GetMemberInfoResponse;
-import com.boldfaced7.application.port.out.ListAttachmentsInfoResponse;
+import com.boldfaced7.adapter.out.internal.AttachmentsInfoQueryResponse;
 import com.boldfaced7.exception.article.ArticleNotFoundException;
 import com.boldfaced7.exception.member.MemberNotFoundException;
 import org.assertj.core.api.Assertions;
@@ -22,7 +22,7 @@ class GetArticleServiceTest {
         var sut = new GetArticleService(
                 id -> Optional.of(article(ID, MEMBER_ID, TITLE, CONTENT)),
                 request -> Optional.of(new GetMemberInfoResponse(MEMBER_ID, EMAIL, NICKNAME)),
-                request -> new ListAttachmentsInfoResponse(ID, ATTACHMENTS)
+                request -> new AttachmentsInfoQueryResponse(ID, ATTACHMENTS)
         );
         var command = new GetArticleCommand(ID);
 
